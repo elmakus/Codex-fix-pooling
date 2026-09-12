@@ -35,17 +35,17 @@ cards:
     evidence: implementation/evidence/TP_M01-T02_PRUNING_EQUIVALENCE.md
   TP_M01-T03:
     title: Define protected-output and threshold safety contract
-    execution_status: in_progress
+    execution_status: done
     executor: chatgpt
     depends_on:
       - TP_M01-T01
       - TP_M01-T02
-    result_commit: null
+    result_commit: 9be1e0474dd38186bfee6147788c3b65cf9aef38
     result_pr: null
-    evidence: null
+    evidence: implementation/evidence/TP_M01-T03_SAFETY_CONTRACT.md
   TP_M01-T04:
     title: Define effectiveness benchmark and quality regression matrix
-    execution_status: planned
+    execution_status: ready
     executor: null
     depends_on:
       - TP_M01-T01
