@@ -9,7 +9,7 @@ active_openspec: null
 milestones:
   TP_M01:
     title: Current-baseline pruning discovery
-    execution_status: ready
+    execution_status: in_progress
     checkpoint: TP_M01_DISCOVERY_GREEN
     implementation_head: null
     handoff: null
@@ -18,8 +18,8 @@ milestones:
 cards:
   TP_M01-T01:
     title: Pin baselines and map current request/context architecture
-    execution_status: ready
-    executor: null
+    execution_status: in_progress
+    executor: chatgpt
     depends_on: []
     result_commit: null
     result_pr: null
