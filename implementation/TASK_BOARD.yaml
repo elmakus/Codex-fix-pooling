@@ -35,8 +35,11 @@ milestones:
     openspec: openspec/changes/tp-m02-tool-output-pruning/
     active_plan: planning/TP_M02_BEST_EFFORT_CODEX_HANDOFF_PLAN.md
     patch_series: implementation/patches/TP_M02_SERIES.md
+    patch_series_head_commit: 9f55ff417184cde300ae7342f00f6e625a71faeb
+    carrier_integrity: requires_preapply_git_apply_recount_check_or_equivalent_normalization
     refresh_evidence: implementation/evidence/TP_M02_REFRESH_BASELINE.md
     static_review: implementation/evidence/TP_M02_STATIC_REVIEW.md
+    static_review_addendum: implementation/evidence/TP_M02_STATIC_REVIEW_ADDENDUM.md
     prepared_tests: implementation/evidence/TP_M02_PREPARED_TESTS.md
     handoff: project-handoffs/TP_M02_CODEX_EXECUTION_HANDOFF.md
     historical_capability_record: implementation/blockers/TP_M02_CAPABILITY_GATE.md
@@ -96,15 +99,16 @@ cards:
     execution_status: done
     executor: chatgpt
     depends_on: [BE-01]
-    result_commit: 34345340ace964ad11c6b5130862860158183a8e
+    result_commit: 9f55ff417184cde300ae7342f00f6e625a71faeb
     evidence: implementation/patches/TP_M02_SERIES.md
   BE-03:
     title: Static adversarial patch review and correction
     execution_status: done
     executor: chatgpt
     depends_on: [BE-02]
-    result_commit: 6dc7b2930c4518e8c2cf48637b4b2a5f75ef2e7d
+    result_commit: 38bec96667f18f823b71cefc2e24fdad006bb414
     evidence: implementation/evidence/TP_M02_STATIC_REVIEW.md
+    evidence_addendum: implementation/evidence/TP_M02_STATIC_REVIEW_ADDENDUM.md
   BE-04:
     title: Produce Codex execution and Community integration/install handoff
     execution_status: done
