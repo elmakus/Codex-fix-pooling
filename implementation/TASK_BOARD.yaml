@@ -82,14 +82,14 @@ cards:
     openspec: null
   M02-T02:
     title: Freeze feature/settings/provenance contract in OpenSpec
-    execution_status: ready
-    executor: null
+    execution_status: in_progress
+    executor: chatgpt
     depends_on: [M02-T01]
     card: implementation/cards/M02-T02.md
     result_commit: null
     result_pr: null
     evidence: null
-    openspec: candidate-required
+    openspec: openspec/changes/custom-codex-runtime-m02
   M02-T03:
     title: Establish controlled Codex carrier and reproducible runtime build provenance
     execution_status: planned
@@ -99,7 +99,7 @@ cards:
     result_commit: null
     result_pr: null
     evidence: null
-    openspec: pending-M02-T02
+    openspec: openspec/changes/custom-codex-runtime-m02
   M02-T04:
     title: Implement custom-codex-runtime feature and fail-closed package selection
     execution_status: planned
@@ -109,7 +109,7 @@ cards:
     result_commit: null
     result_pr: null
     evidence: null
-    openspec: pending-M02-T02
+    openspec: openspec/changes/custom-codex-runtime-m02
   M02-T05:
     title: Verify M02 package-level acceptance and rollback readiness
     execution_status: planned
@@ -119,4 +119,4 @@ cards:
     result_commit: null
     result_pr: null
     evidence: null
-    openspec: pending-M02-T02
+    openspec: openspec/changes/custom-codex-runtime-m02
