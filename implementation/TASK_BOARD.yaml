@@ -3,19 +3,20 @@ branch: tool-output-pruning
 plan: planning/MASTER_PLAN.md
 current_milestone: TP_M01
 execution_policy: chatgpt_only
-latest_handoff: null
+latest_handoff: project-handoffs/TP_M01_HANDOFF.md
 active_openspec: null
 
 milestones:
   TP_M01:
     title: Current-baseline pruning discovery
-    execution_status: in_progress
+    execution_status: done
     checkpoint: TP_M01_DISCOVERY_GREEN
-    implementation_head: null
-    handoff: null
-    acceptance_evidence: null
-    review_gate: pending_required_independent_review
-    review_pointer: implementation/blockers/TP_M01_REQUIRED_INDEPENDENT_REVIEW.md
+    checkpoint_kind: logical
+    implementation_head: 506c7f38bd4d71aeb0be50d0d70b8922b8ca4e60
+    handoff: project-handoffs/TP_M01_HANDOFF.md
+    acceptance_evidence: implementation/evidence/TP_M01_ACCEPTANCE.md
+    review_gate: passed_required_independent_review
+    review_pointer: implementation/evidence/TP_M01_ACCEPTANCE.md
 
 cards:
   TP_M01-T01:
@@ -35,6 +36,7 @@ cards:
     result_commit: 7fc54bbcd9b87a47a5e80af6aae5ac93d0a23189
     result_pr: null
     evidence: implementation/evidence/TP_M01-T02_PRUNING_EQUIVALENCE.md
+    independent_review: green
   TP_M01-T03:
     title: Define protected-output and threshold safety contract
     execution_status: done
@@ -45,6 +47,7 @@ cards:
     result_commit: 9be1e0474dd38186bfee6147788c3b65cf9aef38
     result_pr: null
     evidence: implementation/evidence/TP_M01-T03_SAFETY_CONTRACT.md
+    independent_review: green
   TP_M01-T04:
     title: Define effectiveness benchmark and quality regression matrix
     execution_status: done
@@ -66,8 +69,11 @@ cards:
     result_commit: 1893b2c2631e571bf376f0da7f39778842259406
     result_pr: null
     evidence: implementation/evidence/TP_M01-T05_STRATEGY_AND_COMPATIBILITY.md
+    independent_review: green
 
 branch_state:
   implementation_branch: tool-output-pruning
   pull_request: null
-  note: All TP_M01 discovery cards have executor evidence, but milestone terminal acceptance/checkpoint is pending fresh independent review required by T02/T03/T05 and workflow review policy. No pruning implementation or production/runtime mutation authorized.
+  checkpoint_tag_created: false
+  checkpoint_tag_note: Active GitHub connector exposes no tag-creation action; TP_M01_DISCOVERY_GREEN is recorded as a durable logical checkpoint on this branch.
+  note: TP_M01 discovery is terminally done after required fresh independent review and integrated acceptance. TP_M02 has not started. No pruning implementation, fork mutation, Community source mutation, runtime substitution, local install or production deployment occurred.
