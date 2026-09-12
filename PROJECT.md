@@ -5,132 +5,95 @@ Branch: `tool-output-pruning`
 
 ## Current state
 
-- phase: TP_M02 execution preparation complete; implementation not started
-- goal: deliver a maintainable opt-in integration of request-time tool-output pruning for ChatGPT Community for Linux (`ilysenko/codex-desktop-linux`), based on behavior introduced by `tekacs/codex@d70b903a4edbbb02c5009ae8e6194f2128d80213`
-- status: `TP_M02 — Pruning feature implementation` is prepared but `BLOCKED` before coding by the current ChatGPT-session Rust/Cargo test-capability gate
-- execution_policy: chatgpt_only
-- required prior checkpoint: `TP_M01_DISCOVERY_GREEN` (logical checkpoint)
-- TP_M02 preparation start HEAD: `91366ae4a0a2060f7e26662e19201159aa15a46b`
+- phase: TP_M02 best-effort patch authoring/handoff
+- goal: prepare the strongest statically reviewed always-on request-time tool-output-pruning patch possible, then hand it to Codex to inspect, fix if necessary, and attempt to integrate/install together with the ChatGPT Community for Linux update path
+- validation status: authoring environment has no Rust/Cargo lane; resulting patch must remain explicitly `BEST_EFFORT / UNCOMPILED / UNTESTED` until downstream validation
+- prior checkpoint retained: `TP_M01_DISCOVERY_GREEN`
+- historical behavior reference: `tekacs/codex@d70b903a4edbbb02c5009ae8e6194f2128d80213`
 
-## Canonical authority
+## Active authority
 
+- best-effort plan: `planning/TP_M02_BEST_EFFORT_CODEX_HANDOFF_PLAN.md`
 - requirements: `requirements/REQUIREMENTS.md`
-- approved plan: `planning/MASTER_PLAN.md`
-- current milestone: `implementation/milestones/TP_M02_PRUNING_FEATURE_IMPLEMENTATION.md`
-- task board: `implementation/TASK_BOARD.yaml`
-- TP_M02 Execution Prep evidence: `implementation/evidence/TP_M02_EXECUTION_PREP.md`
-- current blocker: `implementation/blockers/TP_M02_CAPABILITY_GATE.md`
-- latest cumulative handoff: `project-handoffs/TP_M01_HANDOFF.md`
-- active OpenSpec change: `openspec/changes/tp-m02-tool-output-pruning/`
+- accepted discovery/safety evidence: `implementation/evidence/TP_M01_ACCEPTANCE.md`
+- historical handoff: `project-handoffs/TP_M01_HANDOFF.md`
+- behavior contract: `openspec/changes/tp-m02-tool-output-pruning/specs/tool-output-pruning.md`
 
-## Fresh Capability / Refresh Gate state
+The previous capability-gated TP_M02 execution-prep material remains historical evidence. It no longer blocks static patch authoring. It still accurately records that this ChatGPT environment cannot itself prove compile/test success.
 
-### Capability Gate
+## Product decision — pruning is always on
 
-Verdict: `BLOCKED FOR CODING` under `chatgpt_only`.
+This project variant intentionally does **not** reproduce the historical feature toggle.
 
-The preparation session has Git/GitHub read/write/readback, but no `cargo`, `rustc`, `rustup`, Docker or Podman and no established equivalent project Rust CI lane. TP_M02-T00 is the bounded corrective card; do not route to Codex or change policy automatically.
+Historical `tekacs/codex@d70b903a4edbbb02c5009ae8e6194f2128d80213` exposed `Feature::ToolOutputPrune` as an experimental feature with `default_enabled: false`. Our target behavior is different:
 
-### Refresh Gate
+- pruning runs whenever the patched runtime constructs an eligible request;
+- no feature flag;
+- no `/experimental` switch;
+- no user-facing enable/disable option;
+- no config key solely for turning pruning on/off.
 
-Verdict: `GREEN` after bounded reconciliation.
+Always-on does not weaken the safety boundary: uncertain or protected evidence remains intact.
 
-- refreshed official source: `openai/codex@53ff712a48379ce8df605e292afd6046ca88ae9b`
-- previous accepted source: `openai/codex@944d6fd1ba4baab69dbedd205282dc72ec20abb5`
-- relationship: refreshed SHA is the direct child of accepted SHA
-- drift: TUI agent command-center model grouping only; relevant `codex-rs/core/src/session/turn.rs` blob remains exactly unchanged
-- refreshed Community source: `ilysenko/codex-desktop-linux@249cd4b64d42434f51417fec4a318750d461b676` (unchanged)
-- official Linux package baseline: `26.908.40834` (unchanged from accepted Community evidence)
+## Fresh baseline at strategy pivot
 
-Therefore accepted `NOT_EQUIVALENT`, the TP_M01 safety contract and `REIMPLEMENT_EQUIVALENT_BEHAVIOR` remain current.
+- `openai/codex@c4017a87aacc7558002b7cb510025e967c1d765e`
+- `ilysenko/codex-desktop-linux@249cd4b64d42434f51417fec4a318750d461b676`
+- Linux package baseline: `26.908.40834`
 
-## TP_M02 OpenSpec contract
+Current upstream still has the selected single integration seam inside `run_sampling_request`:
 
-Active change: `openspec/changes/tp-m02-tool-output-pruning/`.
+`initial/regenerated prompt_input -> [pruning transform] -> executed-tool metadata -> build_prompt`
 
-It freezes only TP_M02 behavior/config/testing:
+A retry rebuilds prompt input from canonical history, so applying the transform at that seam covers both first attempt and regenerated retries without using pruning to mutate canonical history.
 
-- explicit off-by-default feature control;
-- enabled-with-incomplete-policy => fail-closed no-prune;
-- request-time transformation of derived prompt input only;
-- canonical history remains unchanged by pruning;
-- only explicitly configured replayable tool identities can become eligible;
-- failures, unknown success, `apply_patch`/mutation evidence, unknown/new/unclassifiable classes, malformed/ambiguous pairing, structured/media, `ToolSearchOutput`, recent region and newest protected budget remain protected;
-- standard/custom semantic parity;
-- >=2 user-boundary recency floor;
-- configurable newest protected-output budget and minimum net-savings gate;
-- historical 40k/20k are anchors, not implicit production defaults;
-- initial and retry/regenerated requests use the same policy;
-- deterministic internal pruning observability for R19/provenance tests.
+## Safety contract retained
 
-Community updater/package/runtime-selection contracts remain outside TP_M02.
+- request-time derived-input transformation only;
+- canonical history not destroyed solely for token savings;
+- standard/custom output parity;
+- preserve failed outputs and unknown success;
+- preserve `apply_patch` and mutation/durability-sensitive evidence;
+- preserve unknown/new/unclassifiable classes;
+- preserve malformed/ambiguous pairing;
+- preserve unsupported structured/media output;
+- preserve `ToolSearchOutput`;
+- preserve current/recent user-turn region and a newest-output budget;
+- fail closed when identity/accounting/safety is ambiguous;
+- retry/regenerated requests receive the same pruning contract.
 
-## Current implementation design
+Historical `40_000` protected / `20_000` minimum values are provenance/design anchors. In the new no-config variant, conservative compile-time constants may be used for the first handoff patch if explicitly documented for Codex review.
 
-Current exact request seam on `53ff712a...`:
+## New ordered work
 
-`ContextManager clone -> for_prompt(...) -> run_sampling_request loop -> initial/regenerated prompt_input -> executed-tool metadata -> build_prompt`
+1. **BE-01 — Refresh/freeze exact source seams.**
+2. **BE-02 — Author minimal always-on patch against exact upstream.**
+3. **BE-03 — Static adversarial review and correction; no false compile/test claims.**
+4. **BE-04 — Produce Codex execution packet, including CE update/install/rollback instructions.**
+5. **BE-05 — Reconcile whatever compile/runtime/install evidence Codex reports back.**
 
-The intended pruning integration point is inside the `run_sampling_request` loop after prompt input is selected/materialized and before metadata attachment / `build_prompt`. This covers first and retry requests without mutating canonical history and avoids creating a second context-management system.
+The handoff target after BE-04 is: “this is the strongest patch we could prepare from exact-source static analysis; inspect it, change anything that is wrong, then attempt build/integration/install.”
 
-Current accounting/config seams:
+## Codex downstream responsibility
 
-- item token estimate: `codex-rs/core/src/context_manager/history.rs::estimate_item_token_count`
-- request estimate for tests/provenance: `codex-rs/core/src/guardian/request_budget.rs::estimate_request_tokens`
-- feature registry: `codex-rs/features/src/lib.rs`
-- typed feature config: `codex-rs/features/src/feature_configs.rs`
+Codex receiving the bundle must not blindly trust it. It should:
 
-Patch-carrier direction: keep an owned exact-upstream-based patch carrier in this project repository, with an ephemeral exact-source checkout/worktree for compile/tests once T00 establishes the execution lane. Do not create a second project repository/fork without explicit topology authority.
+1. compare the exact patch base with its checkout and current upstream;
+2. review the implementation for coherence and safety;
+3. apply-check and fix API/compile mismatches when obvious;
+4. compile/test as useful and available;
+5. inspect the current `ilysenko/codex-desktop-linux` update/build/runtime substitution mechanism rather than guessing how `resources/codex` maps to upstream source;
+6. attempt the ChatGPT CE update plus patched Codex installation only after that review;
+7. keep a rollback path to stock CE/runtime;
+8. if an architectural assumption fails, return exact errors, source context and symptoms for reconciliation.
 
-## TP_M02 Task Cards
+## Current restrictions
 
-Ordered durable cards:
+- do not write to `openai/codex`, `tekacs/codex` or `ilysenko/codex-desktop-linux` repositories;
+- do not claim that this authoring environment compiled/tested the patch;
+- do not claim installation success before Codex actually reports it;
+- preserve exact provenance for every patch base and handoff revision.
 
-1. `TP_M02-T00_RUST_PATCH_TEST_LANE.md` — BLOCKED corrective capability card
-2. `TP_M02-T01_FEATURE_CONFIG.md` — PLANNED
-3. `TP_M02-T02_SAFETY_CLASSIFICATION.md` — PLANNED
-4. `TP_M02-T03_PRUNING_CORE.md` — PLANNED
-5. `TP_M02-T04_REQUEST_INTEGRATION.md` — PLANNED
-6. `TP_M02-T05_R19_REGRESSION.md` — PLANNED
-7. `TP_M02-T06_PROVENANCE_ACCEPTANCE.md` — PLANNED
+## Exact next task
 
-All coding cards depend transitively on T00. No implementation card is READY while the capability blocker remains.
-
-## Independent review
-
-Integrated TP_M02 milestone acceptance requires a fresh independent normal ChatGPT review before `TP_M02_PATCH_GREEN`, because pruning deliberately suppresses model-visible evidence and implements a material failure/mutation-evidence protection boundary.
-
-Focused review is recommended for T02-T04; it does not replace the required integrated final review.
-
-## TP_M01 accepted results retained
-
-- checkpoint: `TP_M01_DISCOVERY_GREEN`
-- TP_M01 acceptance: `implementation/evidence/TP_M01_ACCEPTANCE.md`
-- upstream equivalence verdict: `NOT_EQUIVALENT`
-- safety posture: unknown/ambiguous/durability-sensitive outputs fail closed and remain protected
-- canonical-history invariant: normal pruning transforms derived request payload only
-- retry/regenerated request inputs receive the same policy
-- `ToolSearchOutput` protected initially
-- historical `40k protected / 20k minimum` values are benchmark anchors only
-- strategy: `REIMPLEMENT_EQUIVALENT_BEHAVIOR`
-- exact public bundled `resources/codex` -> `openai/codex` source-SHA mapping remains unavailable and must not be guessed
-
-## Prohibited / not started
-
-- no pruning implementation exists yet;
-- no writes to `openai/codex`, `tekacs/codex` or `ilysenko/codex-desktop-linux`;
-- no custom runtime build/install/substitution;
-- no production/local deployment;
-- no TP_M03 work;
-- no ChatGPT Work;
-- no Codex delegation.
-
-## Exact next durable step
-
-Resolve/execute `implementation/cards/TP_M02-T00_RUST_PATCH_TEST_LANE.md` in a normal ChatGPT session that can provide a verifiable Rust/Cargo execution lane (or equivalent triggerable/readable project CI). T00 must not write pruning behavior. After T00 is DONE, `TP_M02-T01` becomes the first pruning implementation card.
-
-## Workflow
-
-- authority: `elmakus/chatgpt-codex-project-workflow:main`
-- ChatGPT entrypoint: `CHATGPT.md`
-- ChatGPT Work: out of scope
+Execute **BE-01**, immediately followed by **BE-02** if refresh shows no architectural blocker: freeze current source seams and author the best-effort always-on patch against `openai/codex@c4017a87aacc7558002b7cb510025e967c1d765e` (or a newer exact HEAD if upstream moves before authoring begins).
