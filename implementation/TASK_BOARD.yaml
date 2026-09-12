@@ -26,16 +26,16 @@ cards:
     evidence: implementation/evidence/TP_M01-T01_BASELINE_ARCHITECTURE.md
   TP_M01-T02:
     title: Issue strict upstream pruning-equivalence verdict
-    execution_status: in_progress
+    execution_status: done
     executor: chatgpt
     depends_on:
       - TP_M01-T01
-    result_commit: null
+    result_commit: 7fc54bbcd9b87a47a5e80af6aae5ac93d0a23189
     result_pr: null
-    evidence: null
+    evidence: implementation/evidence/TP_M01-T02_PRUNING_EQUIVALENCE.md
   TP_M01-T03:
     title: Define protected-output and threshold safety contract
-    execution_status: planned
+    execution_status: ready
     executor: null
     depends_on:
       - TP_M01-T01
