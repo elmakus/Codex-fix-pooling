@@ -1,49 +1,77 @@
 # TP_M02 Tool Output Pruning — Proposal
 
-Status: JIT execution-preparation contract
-Milestone: `TP_M02 — Pruning feature implementation`
+Status: `BEST_EFFORT STATIC PATCH AUTHORING / DOWNSTREAM CODEX VALIDATION PENDING`
+Milestone: `TP_M02 — Tool-output pruning patch`
 Required prior checkpoint: `TP_M01_DISCOVERY_GREEN`
-Current refreshed upstream source baseline: `openai/codex@53ff712a48379ce8df605e292afd6046ca88ae9b`
+Current exact upstream base: `openai/codex@c4017a87aacc7558002b7cb510025e967c1d765e`
+Current Community baseline: `ilysenko/codex-desktop-linux@249cd4b64d42434f51417fec4a318750d461b676`
+Community package baseline: `26.908.40834`
 Historical behavior provenance: `tekacs/codex@d70b903a4edbbb02c5009ae8e6194f2128d80213`
 Strategy: `REIMPLEMENT_EQUIVALENT_BEHAVIOR`
 
 ## Why
 
-TP_M01 established that the current official Codex baseline does not provide the required request-time old-tool-output pruning behavior as a semantic whole. TP_M02 therefore needs a minimal current-architecture implementation that reduces repeated model-request context while preserving diagnostic, mutation and durability-sensitive evidence.
+TP_M01 established and independently accepted `NOT_EQUIVALENT`: current official Codex has several context-reduction mechanisms but not the required request-time old-tool-output pruning contract as a semantic whole. TP_M02 therefore carries a minimal current-architecture reimplementation.
 
-The implementation contract is safety-sensitive because removing model-visible tool output can change later reasoning. The change must therefore be explicit, request-time only, fail closed, testable on initial and regenerated retry requests, and non-destructive to canonical history.
+The prior execution-prep requirement for a local Rust/Cargo validation lane has been superseded as an authoring blocker. The current strategy deliberately produces a `BEST_EFFORT / STATICALLY_REVIEWED / UNCOMPILED / UNTESTED` patch for Codex to inspect, adapt, build, test and integrate later.
+
+## Product decision — always on
+
+Pruning is intentionally unconditional in the patched runtime.
+
+TP_M02 MUST NOT add:
+
+- a feature flag;
+- `/experimental` integration;
+- a config enable/disable setting;
+- a config schema solely for pruning activation;
+- a runtime off path.
+
+Historical `Feature::ToolOutputPrune` / `Stage::Experimental` / `default_enabled: false` is provenance only and is not reproduced.
 
 ## What
 
-TP_M02 will implement only the Codex-side pruning behavior needed by R3-R8 and R19:
+TP_M02 implements only the bounded Codex-side request transform:
 
-- an explicit opt-in feature/config control;
-- a pure/bounded transformation of derived `Vec<ResponseItem>` request input;
-- explicit protected and eligible output classification;
-- recent-turn and newest-output protection;
-- minimum-benefit gating;
-- standard/custom output parity;
-- the same policy on initial and retry/regenerated sampling requests;
-- observable pruning results sufficient for deterministic semantic/provenance tests;
-- exact upstream/change provenance.
+- operate on derived `Vec<ResponseItem>` request input;
+- run inside every `run_sampling_request` loop attempt after first/regenerated input materialization and before executed-tool metadata attachment / `build_prompt`;
+- preserve canonical `ContextManager` history;
+- fail closed for failures, unknown success, unknown/ambiguous pairing, mutation evidence, structured/media content, `ToolSearchOutput` and unknown/new variants;
+- require two user-input boundaries before age eligibility;
+- retain a newest otherwise-eligible token budget;
+- require meaningful replacement-aware net savings;
+- replace whole eligible output bodies with `[Old tool result content cleared]` while preserving structural metadata;
+- use current Codex item-token estimation rather than a second accounting subsystem;
+- prepare unexecuted semantic tests and exact downstream handoff.
 
-## Safety posture
+## Initial positive eligibility policy
 
-Eligibility is proven, not assumed. The initial implementation only considers explicitly configured/classified replayable tool names and text-only successful standard/custom outputs. Mandatory protected categories always win over allowlisting. Unknown, ambiguous, malformed, structured/media, failed, discovery/capability and mutation-sensitive evidence remains intact.
+Only `exec_command` can become eligible, and only when its JSON `cmd` is statically classified as one simple read-only command from the bounded list frozen in the patch/evidence. `exec_command` is not globally disposable. Unknown, composed, redirecting, mutating or execution-extending command forms are protected.
 
-No historical token constant is promoted to a production default by this OpenSpec. `40_000` protected tokens and `20_000` minimum removable tokens remain benchmark/provenance anchors only.
+The initial constants are compile-time policy:
 
-## Current implementation boundary
+- `40_000` estimated tokens newest otherwise-eligible protection target;
+- `20_000` estimated aggregate net-savings minimum;
+- `2` user-input boundaries.
 
-The refreshed `openai/codex@53ff712a...` keeps the accepted TP_M01 core request seam unchanged from `944d6fd1...`: `run_turn` materializes prompt input from `ContextManager::for_prompt`, and `run_sampling_request` regenerates prompt input from canonical history on retry before `build_prompt`.
+These remain conservative provenance-based starting values, not a claim of benchmark optimality.
 
-The intended integration point is therefore inside the `run_sampling_request` request loop, after the current request input has been selected/materialized and before executed-tool metadata attachment / `build_prompt`. One policy application at that point covers both initial and regenerated retry inputs without mutating `ContextManager`.
+## Patch package
 
-## Out of scope
+Canonical patch-series pointer: `implementation/patches/TP_M02_SERIES.md`.
 
-- ChatGPT Community package/updater/runtime-selection behavior (TP_M04/TP_M05);
-- production install or runtime substitution;
-- TP_M03 effectiveness/quality acceptance beyond the observability required to test TP_M02 semantics;
-- importing unrelated `tekacs/custom-cli` changes;
-- destructive canonical-history compaction/rewrite as a pruning mechanism;
-- selecting final production threshold values from the historical 40k/20k anchors.
+Static review: `implementation/evidence/TP_M02_STATIC_REVIEW.md`.
+Prepared tests: `implementation/evidence/TP_M02_PREPARED_TESTS.md`.
+Fresh exact source freeze: `implementation/evidence/TP_M02_REFRESH_BASELINE.md`.
+
+## Out of scope for this ChatGPT session
+
+- modifying `openai/codex`, `tekacs/codex` or `ilysenko/codex-desktop-linux`;
+- local compile/test/build;
+- CE update/install/deployment;
+- custom runtime installation;
+- final runtime GREEN;
+- TP_M03;
+- unrelated context-management redesign.
+
+Downstream Codex may later inspect the current CE update/build/install mechanism and attempt controlled integration only under the durable handoff and with rollback preserved.
