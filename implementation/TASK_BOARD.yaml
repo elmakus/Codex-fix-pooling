@@ -5,11 +5,11 @@ execution_policy: chatgpt_only
 milestones:
   M01:
     title: Baseline and compatibility discovery
-    execution_status: in_progress
+    execution_status: done
     checkpoint: M01_BASELINE_GREEN
-    implementation_head: null
-    handoff: null
-    acceptance_evidence: null
+    implementation_head: 8191b7a5664beb371bf62dbe6ec66175d362457b
+    handoff: project-handoffs/M01_HANDOFF.md
+    acceptance_evidence: implementation/evidence/M01_ACCEPTANCE.md
     milestone_file: implementation/milestones/M01_BASELINE_AND_COMPATIBILITY_DISCOVERY.md
 cards:
   M01-T01:
