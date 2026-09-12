@@ -24,13 +24,13 @@ cards:
     openspec: null
   M01-T02:
     title: Map bundled runtime to Codex source and protocol baseline
-    execution_status: in_progress
+    execution_status: done
     executor: chatgpt
     depends_on: [M01-T01]
     card: implementation/cards/M01-T02.md
-    result_commit: null
+    result_commit: 958c124272cdc46f0fe10ef94cccc50e58eb2c80
     result_pr: null
-    evidence: null
+    evidence: implementation/evidence/M01-T02_SOURCE_PROTOCOL.md
     openspec: null
   M01-T03:
     title: Audit runtime override, feature, and update persistence seams
@@ -44,7 +44,7 @@ cards:
     openspec: null
   M01-T04:
     title: Determine upstream equivalence and patch-carrier refresh strategy
-    execution_status: planned
+    execution_status: ready
     executor: null
     depends_on: [M01-T02]
     card: implementation/cards/M01-T04.md
