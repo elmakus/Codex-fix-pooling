@@ -1,0 +1,59 @@
+diff --git a/codex-rs/core/src/tool_output_prune.rs b/codex-rs/core/src/tool_output_prune.rs
+--- a/codex-rs/core/src/tool_output_prune.rs
++++ b/codex-rs/core/src/tool_output_prune.rs
+@@ -5,6 +5,7 @@ use codex_protocol::models::FunctionCallOutputBody;
+ use codex_protocol::models::ResponseItem;
+ 
+ use crate::context_manager::estimate_item_token_count;
++use crate::event_mapping::is_contextual_user_message_content;
+@@ -24,6 +25,7 @@ pub(crate) fn prune(items: Vec<ResponseItem>) -> Vec<ResponseItem> {
+     let mut protected_candidate_tokens = 0usize;
+     let mut replacements = Vec::<(usize, ResponseItem, usize)>::new();
+     let mut net_savings = 0usize;
++    let mut accounting_valid = true;
+@@ -44,8 +46,12 @@ pub(crate) fn prune(items: Vec<ResponseItem>) -> Vec<ResponseItem> {
+         // Protect whole outputs until the newest otherwise-eligible budget is satisfied.
+         // This intentionally may retain more than the nominal budget when one output crosses it.
+         if protected_candidate_tokens < PRUNE_PROTECT_TOKENS {
+-            protected_candidate_tokens =
+-                protected_candidate_tokens.saturating_add(original_tokens);
++            let Some(updated) = protected_candidate_tokens.checked_add(original_tokens) else {
++                accounting_valid = false;
++                break;
++            };
++            protected_candidate_tokens = updated;
+             continue;
+         }
+@@ -58,10 +64,15 @@ pub(crate) fn prune(items: Vec<ResponseItem>) -> Vec<ResponseItem> {
+             continue;
+         }
+ 
+-        net_savings = net_savings.saturating_add(saved_tokens);
++        let Some(updated) = net_savings.checked_add(saved_tokens) else {
++            accounting_valid = false;
++            break;
++        };
++        net_savings = updated;
+         replacements.push((idx, replacement, saved_tokens));
+     }
+ 
+-    if net_savings <= PRUNE_MINIMUM_NET_TOKENS {
++    if !accounting_valid || net_savings <= PRUNE_MINIMUM_NET_TOKENS {
+         return items;
+     }
+@@ -227,6 +238,7 @@ fn is_user_input_boundary(item: &ResponseItem) -> bool {
+     let ResponseItem::Message {
+         role,
++        content,
+         internal_chat_message_metadata_passthrough,
+         ..
+     } = item
+@@ -236,6 +248,9 @@ fn is_user_input_boundary(item: &ResponseItem) -> bool {
+     if role != "user" {
+         return false;
+     }
++    if is_contextual_user_message_content(content) {
++        return false;
++    }
+ 
+     internal_chat_message_metadata_passthrough
