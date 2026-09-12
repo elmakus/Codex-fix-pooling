@@ -5,7 +5,7 @@ execution_policy: chatgpt_only
 milestones:
   M01:
     title: Baseline and compatibility discovery
-    execution_status: ready
+    execution_status: in_progress
     checkpoint: M01_BASELINE_GREEN
     implementation_head: null
     handoff: null
@@ -14,8 +14,8 @@ milestones:
 cards:
   M01-T01:
     title: Trace official package and bundled Codex baseline
-    execution_status: ready
-    executor: null
+    execution_status: in_progress
+    executor: chatgpt
     depends_on: []
     card: implementation/cards/M01-T01.md
     result_commit: null
