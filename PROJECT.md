@@ -6,7 +6,7 @@ Repository: `elmakus/Codex-fix-pooling`
 
 - phase: M02 execution in progress
 - goal: design a maintainable opt-in integration that makes the `tekacs/codex` background-exec completion wakeup patch usable from ChatGPT Community for Linux (`ilysenko/codex-desktop-linux`) without manual binary replacement after every update
-- status: `M01_BASELINE_GREEN`; M02-T01 complete; M02-T02 READY
+- status: `M01_BASELINE_GREEN`; M02-T01 and M02-T02 complete; M02-T03 READY
 - execution_policy: chatgpt_only
 
 ## Canonical authority
@@ -18,10 +18,10 @@ Repository: `elmakus/Codex-fix-pooling`
 - current milestone: `M02 — Feature contract and build path`
 - milestone file: `implementation/milestones/M02_FEATURE_CONTRACT_AND_BUILD_PATH.md`
 - task board: `implementation/TASK_BOARD.yaml`
-- completed M02 card: `implementation/cards/M02-T01.md`
-- first ready card: `implementation/cards/M02-T02.md`
+- completed M02 cards: `implementation/cards/M02-T01.md`, `implementation/cards/M02-T02.md`
+- first ready card: `implementation/cards/M02-T03.md`
 - latest cumulative handoff: `project-handoffs/M01_HANDOFF.md`
-- active OpenSpec changes: none yet; M02-T02 is now READY and must create the required JIT OpenSpec for the frozen candidate-tree replacement seam
+- active OpenSpec change: `openspec/changes/custom-codex-runtime-m02`
 
 ## Relevant research / evidence
 
@@ -34,6 +34,7 @@ Repository: `elmakus/Codex-fix-pooling`
 - `implementation/evidence/M01-T05_COMPATIBILITY_GATE.md`
 - `implementation/evidence/M01_ACCEPTANCE.md`
 - `implementation/evidence/M02-T01_RUNTIME_SELECTION.md`
+- `implementation/evidence/M02-T02_OPENSPEC.md`
 
 ## Accepted decisions
 
@@ -48,14 +49,15 @@ Repository: `elmakus/Codex-fix-pooling`
 - Feature disabled must rebuild from the verified official payload with stock `resources/codex` untouched.
 - Reuse the existing Linux feature framework and `codex-update-manager`; do not create a second updater or normal post-install overwrite mechanism.
 - Every new official Desktop package tuple invalidates prior custom-runtime compatibility and requires refresh/revalidation.
-- M01 required no OpenSpec. M02-T02 now creates the just-in-time OpenSpec for the frozen candidate-tree replacement contract.
+- Active OpenSpec `custom-codex-runtime-m02` freezes feature enablement, controlled source/build settings, official/custom provenance, PASS/FAIL/UNKNOWN semantics, candidate-tree substitution, stock reconstruction, diagnostics, override detection, and M02 scope boundaries.
+- M02 OpenSpec does not claim M03 wakeup semantics, M04 full Desktop integration, or M05 changed-baseline update acceptance.
 
 ## Refreshed M02 baseline
 
 - `ilysenko/codex-desktop-linux@249cd4b64d42434f51417fec4a318750d461b676`
 - official Linux Desktop baseline: `26.908.40834`
 - M02-T01 result commit: `8632f2f7ee8d04ec0024a8c4b37d02bdffd6b4e4`
-- M02-T01 evidence: `implementation/evidence/M02-T01_RUNTIME_SELECTION.md`
+- M02-T02 result commit: `818688cd49058d5b52fdfdf3d2ddcc0524a7d746`
 
 ## Current compatibility state
 
@@ -63,12 +65,12 @@ Repository: `elmakus/Codex-fix-pooling`
 - current public OpenAI baseline inspected by M01: not strictly equivalent to the reference patch
 - patch retirement: not authorized on current evidence
 - actual custom-runtime substitution: `UNKNOWN / NOT AUTHORIZED`; no candidate has been built or admitted
-- substitution mechanism contract: candidate-tree `resources/codex` replacement, pending M02-T02 OpenSpec specification
+- substitution mechanism contract: candidate-tree `resources/codex` replacement governed by active M02 OpenSpec
 
 ## Open questions / blockers
 
-- No strategic blocker prevents M02-T02 from starting.
-- M02-T03 requires GitHub mutation capability for the owned carrier plus an isolated Codex build environment. Those capabilities must be re-checked when the card becomes ready; under `chatgpt_only`, missing capability blocks rather than routing to Codex.
+- M02-T03 is READY and must re-run Refresh/Capability Gate before any owned-carrier mutation.
+- M02-T03 requires GitHub mutation capability for the owned carrier plus an isolated Codex build environment. Under `chatgpt_only`, missing capability blocks rather than routing to Codex.
 - M02-T04/T05 require an isolated Community build/package test environment and authorized owned development branch/fork; capability must be proved before execution.
 
 ## Workflow
