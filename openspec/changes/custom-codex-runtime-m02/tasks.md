@@ -2,27 +2,27 @@
 
 ## M02-T03 — Runtime patch provenance and carrier recipe
 
-- [ ] Refresh strict upstream-equivalence status before carrying divergence.
-- [ ] Pin exact current OpenAI upstream baseline SHA.
-- [ ] Preserve exact reference provenance `tekacs/codex@9ffcf8db9078eae43d4111ff94259795c1e962c9`.
-- [ ] Prepare a current-baseline patch/rebase recipe or equivalent source change set.
-- [ ] Define intended `elmakus/codex` carrier base/branch relationship for Codex to establish if divergence remains required.
-- [ ] Prepare exact build/test/provenance commands Codex must run.
-- [ ] Mark runtime build/version/SHA-256/architecture as UNKNOWN until Codex produces them.
-- [ ] Leave production Community installation untouched.
+- [x] Refresh strict upstream-equivalence status before carrying divergence.
+- [x] Pin exact current OpenAI upstream baseline SHA.
+- [x] Preserve exact reference provenance `tekacs/codex@9ffcf8db9078eae43d4111ff94259795c1e962c9`.
+- [x] Prepare a current-baseline patch/rebase recipe or equivalent source change set.
+- [x] Define intended `elmakus/codex` carrier base/branch relationship for Codex to establish if divergence remains required.
+- [x] Prepare exact build/test/provenance commands Codex must run.
+- [x] Mark runtime build/version/SHA-256/architecture as UNKNOWN until Codex produces them.
+- [x] Leave production Community installation untouched.
 
 ## M02-T04 — Best-effort Community feature patch
 
-- [ ] Add source-level opt-in `custom-codex-runtime` feature manifest/settings contract.
-- [ ] Preserve official package verification and stock `resources/codex` identity capture.
-- [ ] Integrate controlled custom runtime staging into candidate construction.
-- [ ] Preserve PASS/FAIL/UNKNOWN fail-closed semantics in source logic.
-- [ ] Replace candidate-tree `resources/codex` only on PASS at execution time.
-- [ ] Emit provenance/gate/package diagnostics required by the contract.
-- [ ] Ensure disabled feature reconstructs untouched official `resources/codex`.
-- [ ] Diagnose explicit runtime overrides that bypass package-selected authority.
-- [ ] Reuse existing Community update-builder/updater; add no live-tree overwrite mechanism.
-- [ ] Record all build/runtime assumptions that remain UNKNOWN until Codex verification.
+- [x] Add source-level opt-in `custom-codex-runtime` feature manifest/settings contract.
+- [x] Preserve official package verification and stock `resources/codex` identity capture.
+- [x] Integrate controlled custom runtime staging into candidate construction.
+- [x] Preserve PASS/FAIL/UNKNOWN fail-closed semantics in source logic.
+- [x] Replace candidate-tree `resources/codex` only on PASS at execution time.
+- [x] Emit provenance/gate/package diagnostics required by the contract.
+- [x] Ensure disabled feature reconstructs untouched official `resources/codex`.
+- [x] Diagnose explicit runtime overrides that bypass package-selected authority.
+- [x] Reuse existing Community update-builder/updater; add no live-tree overwrite mechanism.
+- [x] Record all build/runtime assumptions that remain UNKNOWN until Codex verification.
 
 ## M02-T05 — Codex MVP handoff
 
