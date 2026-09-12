@@ -45,8 +45,8 @@ cards:
     evidence: implementation/evidence/TP_M01-T03_SAFETY_CONTRACT.md
   TP_M01-T04:
     title: Define effectiveness benchmark and quality regression matrix
-    execution_status: ready
-    executor: null
+    execution_status: in_progress
+    executor: chatgpt
     depends_on:
       - TP_M01-T01
       - TP_M01-T03
