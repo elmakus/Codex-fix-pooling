@@ -1,7 +1,8 @@
 project: elmakus/Codex-fix-pooling
 plan: planning/MASTER_PLAN.md
+plan_addendum: planning/M02_BEST_EFFORT_MVP_PIVOT.md
 current_milestone: M02
-execution_policy: chatgpt_only
+execution_policy: mixed
 milestones:
   M01:
     title: Baseline and compatibility discovery
@@ -12,9 +13,9 @@ milestones:
     acceptance_evidence: implementation/evidence/M01_ACCEPTANCE.md
     milestone_file: implementation/milestones/M01_BASELINE_AND_COMPATIBILITY_DISCOVERY.md
   M02:
-    title: Feature contract and build path
-    execution_status: blocked
-    checkpoint: M02_FEATURE_GREEN
+    title: Best-effort MVP preparation and Codex handoff
+    execution_status: in_progress
+    checkpoint: M02_MVP_HANDOFF_READY
     implementation_head: null
     handoff: null
     acceptance_evidence: null
@@ -91,17 +92,17 @@ cards:
     evidence: implementation/evidence/M02-T02_OPENSPEC.md
     openspec: openspec/changes/custom-codex-runtime-m02
   M02-T03:
-    title: Establish controlled Codex carrier and reproducible runtime build provenance
-    execution_status: blocked
+    title: Prepare runtime patch provenance and carrier recipe
+    execution_status: ready
     executor: null
     depends_on: [M02-T02]
     card: implementation/cards/M02-T03.md
     result_commit: null
     result_pr: null
-    evidence: implementation/evidence/M02-T03_CAPABILITY_BLOCKER.md
+    evidence: null
     openspec: openspec/changes/custom-codex-runtime-m02
   M02-T04:
-    title: Implement custom-codex-runtime feature and fail-closed package selection
+    title: Prepare best-effort custom-codex-runtime Community patch
     execution_status: planned
     executor: null
     depends_on: [M02-T02, M02-T03]
@@ -111,7 +112,7 @@ cards:
     evidence: null
     openspec: openspec/changes/custom-codex-runtime-m02
   M02-T05:
-    title: Verify M02 package-level acceptance and rollback readiness
+    title: Assemble Codex MVP handoff package
     execution_status: planned
     executor: null
     depends_on: [M02-T04]
