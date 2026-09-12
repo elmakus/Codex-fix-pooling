@@ -1,232 +1,280 @@
-# Master Plan — Custom Codex Runtime for ChatGPT Community
+# Master Plan — Tool Output Pruning for ChatGPT Community
 
 ## 1. Goal
 
-Deliver a maintainable, opt-in integration for ChatGPT Community for Linux that can use a Codex runtime carrying the background-exec completion wakeup behavior from `tekacs/codex` commit `9ffcf8db9078eae43d4111ff94259795c1e962c9`, without manual replacement after every update and without silently running an incompatible stale Codex build.
+Deliver a maintainable, opt-in Codex runtime capability for ChatGPT Community for Linux that reduces repeated request-context cost from old, large tool outputs while preserving task continuity, diagnostic value, package provenance and Desktop/runtime compatibility.
+
+Reference behavior comes from `tekacs/codex@d70b903a4edbbb02c5009ae8e6194f2128d80213` (`core: add request-time tool output pruning`).
+
+This workstream is independent from the background-exec wakeup/polling fix. Shared delivery infrastructure may be reused later, but behavior contracts and acceptance remain separate.
 
 ## 2. Verified baseline
 
-### ChatGPT Community
+### Historical pruning patch
 
-`ilysenko/codex-desktop-linux` verifies and repackages OpenAI's signed official Linux `.deb` and normally reuses the official bundled Codex executable at `resources/codex`.
+The reference patch:
 
-Its Linux feature framework supports opt-in staged resources, runtime hooks, package hooks and custom build/install hooks. Native update reconstruction preserves selected feature configuration. As of audited upstream `ilysenko/codex-desktop-linux@249cd4b64d42434f51417fec4a318750d461b676`, the packaged update-builder extracts the newly verified official payload and applies only locally enabled features; update promotion is atomic and retains the immediately previous managed package as rollback target.
+- adds request-time pruning before sampling rather than destructively rewriting canonical rollout/history;
+- is guarded by `Feature::ToolOutputPrune`;
+- protects recent tool-output content using a `40_000` token budget;
+- only rewrites candidates when more than `20_000` eligible tokens can be removed;
+- replaces removed content with `[Old tool result content cleared]`;
+- protects failed function-call outputs;
+- explicitly protects `apply_patch` outputs;
+- handles both standard and custom tool-call outputs;
+- avoids considering outputs from the most recent user-turn region.
 
-### Source patch
-
-`tekacs/codex@9ffcf8db9078eae43d4111ff94259795c1e962c9` adds pushed completion input for background unified-exec commands, waking idle sessions and delivering completion to active turns while avoiding duplicate completion when the initial call already returned the terminal result. Tool descriptions are also changed to discourage empty polling.
-
-The patch is explicitly maintenance-only until upstream provides strictly equivalent behavior.
+These details are the historical behavioral baseline, not automatically frozen product constants for current Codex.
 
 ### Current upstream freshness note
 
-The pre-implementation audit observed `openai/codex@89c8bcf37d64be69e4c8286f4541c1a84ed312a4` on 2026-09-12. Current source still exposes the ordinary unified-exec tool description rather than the patch's completion-notification guidance, so strict upstream equivalence is not established by source inspection. M01 must perform the complete behavioral/source equivalence check against the exact baseline it acquires; absence of one marker is evidence against equivalence, not a substitute for the full gate.
+As of research on 2026-09-12, code search against current `openai/codex` did not find the historical `tool_output_prune` marker or exact replacement marker. Therefore the historical implementation has not simply landed unchanged.
+
+M01 must still perform a strict equivalence audit against the exact current official bundled/runtime baseline because upstream may now implement equivalent context reduction through another mechanism.
+
+### ChatGPT Community delivery boundary
+
+The wakeup workstream already established that `ilysenko/codex-desktop-linux` uses the verified official OpenAI Linux package as its baseline, carries bundled `resources/codex`, supports opt-in Linux features and preserves selected feature configuration across native updater rebuilds.
+
+That architecture is reusable context, but this branch must independently verify any current facts it relies on before implementation.
 
 ## 3. Target state
 
-An opt-in Community Edition feature, provisionally named `custom-codex-runtime`, that:
+An independently controlled pruning capability that:
 
-1. keeps the verified OpenAI Linux package as the baseline;
-2. identifies the current bundled Codex baseline;
-3. determines whether the wakeup behavior is already present upstream;
-4. when needed, builds/selects a compatible Codex runtime carrying the patch;
-5. verifies provenance and compatibility;
-6. stages that runtime into the rebuilt Community package or directs Desktop to it through an equally controlled package-level mechanism;
-7. persists the feature configuration through Community updater rebuilds;
-8. fails closed rather than installing a stale/incompatible replacement.
+1. starts from the exact current official Desktop/bundled Codex baseline;
+2. detects whether equivalent upstream behavior already exists;
+3. when still needed, refreshes/reimplements only the pruning behavior rather than consuming the entire `tekacs/custom-cli` stack;
+4. keeps pruning explicitly feature-controlled;
+5. proves measurable context/token reduction on representative tool-heavy histories;
+6. proves acceptable continuation/diagnostic behavior after pruning;
+7. selects the custom runtime only after compatibility and pruning-safety gates pass;
+8. re-runs those gates after every relevant upstream/Desktop refresh;
+9. can be disabled or retired independently from the wakeup patch.
 
 ## 4. Frozen architecture decisions
 
-### A1 — Feature, not post-install hack
-The normal mechanism must be an opt-in Community build/package feature. Manual edits under `/opt/codex-desktop` are not the target architecture.
+### A1 — Separate behavior contract
+Tool-output pruning is an independent capability. Shared packaging/runtime-selection infrastructure does not merge its acceptance criteria with background-exec wakeup.
 
-### A2 — Generic runtime override boundary
-The integration is generic `custom-codex-runtime` infrastructure. `tekacs/codex` is the reference patch source, not a permanent hard-coded dependency.
+### A2 — Do not import the whole custom stack
+Do not consume `tekacs/custom-cli` wholesale. Carry only explicitly approved pruning-related changes and unavoidable dependencies.
 
-### A3 — Official package remains provenance baseline
-Do not bypass or weaken the existing signed OpenAI package verification path.
+### A3 — Behavior over historical diff
+`d70b903` is provenance and reference semantics. If current Codex architecture has changed, a behaviorally equivalent reimplementation is preferred over forcing an unsafe cherry-pick.
 
-### A4 — Compatibility before substitution
-Replacement runtime selection is conditional on a deterministic compatibility gate. Unknown compatibility means no replacement.
+### A4 — Request-time, non-destructive intent
+Normal pruning should alter model-request payload construction, not erase canonical conversation/rollout history merely to reduce request size.
 
-### A5 — Upstream-first retirement
-If current official Codex proves behaviorally equivalent to the patch, do not maintain unnecessary divergence.
+### A5 — Safety classification required
+Old tool output is not assumed disposable. Protected categories and threshold policy require current-baseline evidence and regression tests.
 
-### A6 — Atomic delivery
-Normal deployment is through a rebuilt package/app artifact with rollback, not piecemeal mutation of a running installation.
+### A6 — Effectiveness must be measurable
+The project will not carry custom divergence solely because the patch compiles. It must demonstrate material context/token reduction.
 
-### A7 — Controlled patch carrier
-Unless M01 discovers a concrete reason not to, prefer an owned `elmakus/codex` fork as the maintained patch carrier. `tekacs/codex` remains authoritative provenance for the original fix, while an owned fork gives the project explicit control over baseline rebases, provenance, CI and retirement. This is not authorization to create/rebase the fork during M01 discovery.
+### A7 — Compatibility before runtime selection
+The same fail-closed custom-runtime compatibility principle applies: unknown Desktop/runtime compatibility prohibits substitution.
+
+### A8 — Upstream-first retirement
+If current official Codex proves functionally equivalent and sufficiently safe/effective, retire the custom pruning divergence.
+
+### A9 — Generic runtime delivery boundary
+Prefer reusing the generic `custom-codex-runtime` delivery mechanism established by the sibling workstream rather than designing a second package replacement system.
 
 ## 5. Non-goals
 
-- Forking the full Electron application merely to carry this fix.
-- Pinning Desktop forever to the exact historical `tekacs` commit.
-- Weakening package signature/provenance checks.
-- General arbitrary CLI injection without compatibility controls.
-- Enabling unrelated server-side ChatGPT features.
+- Importing unrelated `tekacs/custom-cli` patches.
+- Treating pruning as a substitute for polling/wakeup improvements.
+- Permanently pinning to `d70b903`.
+- Arbitrarily truncating all tool output.
+- Destructively mutating canonical history solely for savings.
+- Tuning server-side account/model behavior.
 
 ## 6. Global invariants
 
-- Official upstream payload must be verified before any custom substitution occurs.
-- Exact custom runtime provenance must be recoverable from durable build metadata/evidence.
-- A failed patch/rebase/compatibility/test gate must never silently fall back to installing an unverified custom binary.
-- Disabling the feature must restore the stock bundled runtime path on the next rebuild.
-- Updates must re-evaluate compatibility; prior compatibility cannot be assumed for a new official package.
-- Runtime behavior equivalent to R4 must be testable independently from the GUI.
-- Compatibility is tied to an exact official Desktop package identity and bundled-runtime identity, not merely a human-readable version string.
-- A custom runtime is eligible only when its upstream source baseline is deterministically tied to, or otherwise proven compatible with, the official bundled runtime by the M01 gate. Ambiguous mapping is not success.
-- Patch refresh is baseline-relative: each new official package requires upstream-equivalence detection first, then patch application/rebase and the full compatibility/acceptance gate if divergence is still needed.
+- Exact current upstream/Desktop/runtime identity must be known before patch refresh or compatibility claims.
+- Canonical history preservation semantics must be explicit and tested.
+- Protected-output policy must be evidence-backed for the current tool model.
+- Thresholds are baseline-relative configuration/design decisions, not sacred historical constants.
+- Effectiveness and quality are both acceptance dimensions; optimizing only one is insufficient.
+- Failed/unknown compatibility or pruning-safety verdicts fail closed.
+- Each new official runtime baseline requires an upstream-equivalence check before carrying custom divergence forward.
+- Pruning provenance must be recoverable from durable build/test evidence.
+- The capability must remain independently disableable and retireable.
 
 ## 7. Known source seams
 
-Current likely integration seams in `ilysenko/codex-desktop-linux`:
+Historical patch seams:
 
-- upstream package metadata, trust verification and extraction path;
-- official runtime location `resources/codex`;
-- `linux-features/` feature framework and build/install hooks;
-- `packaging/update-builder/` plus `codex-update-manager` rebuild/promotion/rollback flow;
-- existing `CODEX_CLI_PATH` handling in Nix and selected features such as shared app-server socket.
+- `codex-rs/core/src/session/turn.rs` around sampling request construction;
+- `codex-rs/core/src/tool_output_prune.rs` in the reference implementation;
+- feature registration/config schema for `ToolOutputPrune`;
+- response item types for standard/custom tool outputs;
+- token-estimation utilities used by request-context accounting.
 
-These are candidate seams only. Exact implementation seams must be refreshed against current `main` immediately before implementation.
+Current exact seams must be rediscovered during M01 because upstream architecture may have moved.
+
+Likely Community integration seams remain the generic custom-runtime feature/build selection path, official `resources/codex`, update-builder/update-manager persistence and runtime compatibility gate.
 
 ## 8. Milestones
 
-### M01 — Baseline and compatibility discovery
+### M01 — Current-baseline pruning discovery
 
-Outcome: establish the evidence and deterministic gate needed before any custom runtime feature is designed or implemented.
+Outcome: establish whether custom pruning is still needed and define the exact current behavior/safety/effectiveness contract before implementation.
 
 Work includes:
 
-- trace exactly how current `codex-desktop-linux` discovers, verifies, extracts, stages and packages official `resources/codex`, including architecture-specific package identity;
-- establish the relationship between official Linux Desktop package identity and bundled Codex runtime identity/version;
-- determine whether the bundled runtime can be mapped deterministically to an `openai/codex` source revision; if not, define the strongest safe alternative identity/compatibility proof and treat unresolved ambiguity as fail-closed;
-- inventory the Desktop/app-server protocol surface actually exercised by the current Desktop baseline and identify drift-sensitive seams relevant to runtime substitution;
-- inspect `CODEX_CLI_PATH`, the Linux feature framework and `codex-update-manager`/packaged update-builder to establish the later substitution and update-persistence constraints without implementing them;
-- perform strict upstream-equivalence analysis for the referenced wakeup patch against the exact current source/runtime baseline;
-- define the patch refresh/rebase lifecycle for each new official baseline, including the upstream-equivalence retirement check;
-- confirm the controlled patch-carrier decision (`elmakus/codex` preferred unless evidence favors another approach);
-- define a concrete compatibility gate and the minimum acceptance/test matrix required before M02 may design substitution.
+- pin exact current `openai/codex`, `ilysenko/codex-desktop-linux` and official bundled Codex baseline identities relevant to this workstream;
+- inspect current upstream context manager, request construction, tool-output truncation/pruning, compaction and token-budget logic;
+- issue a strict equivalence verdict for `d70b903` behavior on the exact tested baseline;
+- map current standard/custom tool output types and identify durability-sensitive tool classes;
+- analyze the historical 40k protection / 20k minimum thresholds against current context-window/accounting behavior;
+- define non-destructive history invariant and observable request-time pruning semantics;
+- define measurable effectiveness criteria and representative benchmark fixtures;
+- define quality/regression matrix covering continuation, failures, patch evidence and interaction with current compaction/context-management;
+- determine whether direct rebase, adapted reimplementation or no custom patch is the correct M02 path;
+- refresh the shared custom-runtime compatibility/delivery assumptions needed by this branch.
 
 Acceptance:
 
-- exact audited `codex-desktop-linux` commit and official package identity are recorded;
-- the path by which `resources/codex` reaches the Community package is evidence-backed;
-- bundled runtime identity and source-revision mapping have an explicit verdict: deterministic, safely derivable by a documented procedure, or unavailable;
-- protocol/app-server compatibility risks and drift-sensitive surfaces are documented for the tested baseline;
-- `CODEX_CLI_PATH`, feature persistence and update-builder/update-manager constraints are documented from current source;
-- strict upstream-equivalence verdict is explicit for the tested baseline and covers all R4 semantics, not only source-patch presence;
-- patch-carrier and refresh strategy are explicit;
-- compatibility gate has concrete inputs, pass/fail/unknown semantics and fail-closed behavior;
-- minimum M02 prerequisite test matrix is documented;
-- no implementation assumption depends on an unverified version mapping.
+- exact tested baselines are recorded;
+- upstream equivalence verdict is explicit: `EQUIVALENT`, `NOT_EQUIVALENT`, or `UNKNOWN`, with `UNKNOWN` blocking implementation selection;
+- current request/context/tool-output architecture is evidence-backed;
+- protected-output policy candidate is documented with rationale;
+- threshold decision inputs are documented without prematurely freezing numbers;
+- canonical-history vs request-payload semantics are explicit;
+- effectiveness benchmark and quality/regression acceptance matrix are defined;
+- M02 implementation strategy has one evidence-backed path or an explicit blocker;
+- no pruning implementation has been started.
 
-Checkpoint: `M01_BASELINE_GREEN` when all acceptance evidence is durable.
+Checkpoint: `TP_M01_DISCOVERY_GREEN`.
 
-### M02 — Feature contract and build path
+### M02 — Pruning feature implementation
 
-Outcome: define and implement the opt-in `custom-codex-runtime` feature boundary in a development fork/branch without touching the user's installed production Community runtime.
+Outcome: implement the minimal current-baseline pruning capability in a controlled Codex patch carrier when M01 proves custom divergence is still required.
 
-Work includes feature manifest/settings contract, source/ref/provenance configuration, build or artifact acquisition path, substitution/redirection mechanism, fail-closed handling, build metadata recording and feature disable/stock-runtime restoration path.
+Work includes:
 
-Acceptance:
-- feature disabled => stock package behavior;
-- feature enabled with compatible custom runtime => rebuilt artifact selects expected runtime;
-- incompatible/unknown runtime => build/update refuses custom substitution;
-- exact source/ref/patch metadata is recorded.
-
-Checkpoint: `M02_FEATURE_GREEN`.
-
-### M03 — Patch behavior verification
-
-Outcome: prove the replacement runtime implements the intended wakeup semantics rather than merely compiling.
-
-Work includes patch-level tests, short inline command, yielding background command, idle wakeup, active-turn pushed completion, duplicate suppression and interactive/intermediate-output `write_stdin`.
+- feature/config gating;
+- request-time pruning implementation against current response-item architecture;
+- protected-output classification;
+- threshold/config behavior selected from M01 evidence;
+- provenance/build identity;
+- unit/property/regression tests for pruning semantics.
 
 Acceptance:
-- all R4/R14 behavior is demonstrated with repeatable tests;
-- failure output distinguishes protocol failure from wakeup-behavior failure.
 
-Checkpoint: `M03_WAKEUP_GREEN`.
+- feature disabled leaves request construction unchanged;
+- feature enabled prunes only eligible old output according to the approved contract;
+- canonical history remains consistent with the approved invariant;
+- all R19 semantic tests pass;
+- exact patch provenance is recorded.
 
-### M04 — Desktop integration verification
+Checkpoint: `TP_M02_PATCH_GREEN`.
 
-Outcome: verify the patched runtime works with ChatGPT Community Desktop/app-server on a controlled test artifact.
+### M03 — Effectiveness and quality validation
 
-Work includes Desktop startup, app-server handshake/session initialization, ordinary command execution, background completion wakeup through the Desktop-owned session path, `write_stdin` regression check and feature-disable rollback check.
+Outcome: prove the patch is worth carrying and does not create unacceptable reasoning/diagnostic regressions.
 
-Acceptance:
-- integration smoke matrix passes;
-- no production install is required if a safe test environment can provide evidence;
-- protocol/runtime skew failure is detected rather than masked.
-
-Checkpoint: `M04_DESKTOP_GREEN`.
-
-### M05 — Update persistence and refresh gate
-
-Outcome: prove that a new official OpenAI package preserves feature intent while re-running equivalence, patch refresh and compatibility decisions instead of blindly reusing an old runtime.
-
-Work includes updater feature-state persistence, changed-upstream compatibility re-evaluation, patch rebase/refresh, upstream-equivalence retirement and rollback to previous known-good package.
+Work includes paired disabled/enabled benchmark fixtures on identical histories, token/context measurement, long-session continuation checks, diagnostic failure retention, patch evidence retention and interaction with current compaction behavior.
 
 Acceptance:
-- at least one controlled update/rebuild scenario passes;
-- stale custom runtime cannot be silently carried across an incompatible baseline;
+
+- pruning demonstrates the M01-defined material context reduction threshold;
+- continuation/regression matrix passes;
+- any known quality trade-offs are bounded and documented;
+- feature is rejected/retired if benefits do not justify divergence.
+
+Checkpoint: `TP_M03_EFFECTIVENESS_GREEN`.
+
+### M04 — Community Desktop integration
+
+Outcome: prove a pruning-capable custom Codex runtime works with ChatGPT Community through the generic runtime-delivery boundary without production mutation.
+
+Work includes current Desktop/app-server compatibility gate, controlled package artifact, startup/session initialization, ordinary tool workflow, pruning-enabled workflow and feature-disable fallback.
+
+Acceptance:
+
+- Desktop/runtime compatibility passes for the exact tested package;
+- pruning remains independently controllable;
+- stock-runtime fallback/disable path works;
+- no unrelated custom stack is required.
+
+Checkpoint: `TP_M04_DESKTOP_GREEN`.
+
+### M05 — Update refresh and retirement lifecycle
+
+Outcome: prove pruning does not become a stale permanent fork obligation.
+
+Work includes updater feature-state persistence, new baseline equivalence check, patch refresh/reimplementation gate, safety/effectiveness rerun and rollback/retirement behavior.
+
+Acceptance:
+
+- a controlled baseline refresh re-runs all required gates;
+- stale pruning runtime is never silently reused;
 - upstream equivalence can retire custom divergence cleanly;
-- failed refresh leaves the current working package intact and produces diagnostic evidence.
+- failed refresh preserves the previous known-good package/runtime.
 
-Checkpoint: `M05_UPDATE_GREEN`.
+Checkpoint: `TP_M05_UPDATE_GREEN`.
 
-### M06 — Upstreamability decision and release
+### M06 — Consolidation with sibling runtime patches
 
-Outcome: decide whether the generic feature is suitable for contribution to `ilysenko/codex-desktop-linux` or should remain private/local, then prepare the chosen delivery path.
+Outcome: decide whether pruning and background-exec wakeup should ship in one maintained custom runtime artifact while remaining independently traceable, testable and retireable.
+
+This milestone must not be interpreted as approval to merge behavior contracts. Consolidation is packaging/maintenance only.
 
 Acceptance:
-- design/maintenance burden and security implications are reviewed;
-- upstream/local decision is recorded;
-- documentation covers enable/disable, provenance, compatibility failures, update behavior and rollback;
-- final integrated test evidence is green.
 
-Checkpoint: `M06_RELEASE_GREEN`.
+- shared vs independent runtime-artifact decision is recorded;
+- each capability has independent provenance and acceptance evidence;
+- enabling/disabling/retiring one capability does not silently change the other's contract;
+- final maintenance model is documented.
+
+Checkpoint: `TP_M06_CONSOLIDATION_GREEN`.
 
 ## 9. Requirement coverage
 
-- R1, R2, R3, R10, R12 → M02
-- R4, R14 → M03
-- R6, R7, R8, R9 → M01 + M02 + M05
-- R5, R16 → M05
-- R11 → all implementation milestones
-- R13 → M02 + M05
-- R15 → M04
+- R1, R2 → M01 + M06
+- R3–R8 → M01 + M02
+- R9, R10, R20, R21 → M01 + M03
+- R11 → M01 + M05
+- R12–R15 → M01 + M04 + M05
+- R16–R18 → M04 + M05
+- R19 → M02
+- R22 → M04
+- R23 → M05
 
-Before executing any milestone, decompose its owned requirements into Task Cards according to the current Project Workflow.
+Before execution of any milestone, its owned requirements must be decomposed into Task Cards according to the current Project Workflow.
 
-## 10. Deployment / migration strategy
-
-There is no production migration in the planning phase. Implementation and testing use isolated branches/build artifacts first. Production installation, if later approved, happens only after M04/M05 evidence establishes Desktop compatibility and update behavior. Rollback retains either the stock official-runtime Community build or the immediately previous known-good managed package.
-
-## 11. Verification strategy
+## 10. Verification strategy
 
 Verification layers:
-1. exact official package/runtime identity and source-baseline evidence;
-2. protocol/schema/app-server compatibility checks;
-3. source/patch unit tests;
-4. custom-runtime build identity and provenance verification;
-5. CLI/unified-exec behavioral tests;
-6. Desktop/app-server integration smoke tests;
-7. package feature on/off tests;
-8. update/rebuild compatibility refresh test;
-9. final controlled install/readback only when explicitly approved.
 
-The compatibility gate must distinguish `PASS`, `FAIL`, and `UNKNOWN`; both `FAIL` and `UNKNOWN` prohibit custom substitution.
+1. exact baseline/source identity;
+2. upstream equivalence audit;
+3. request-time semantic/unit tests;
+4. canonical-history preservation tests;
+5. protected-output classification/regression tests;
+6. paired context/token effectiveness benchmark;
+7. continuation/quality smoke matrix;
+8. Desktop/app-server compatibility and package integration;
+9. update refresh/retirement scenario;
+10. final combined-runtime maintenance decision.
+
+## 11. Deployment strategy
+
+No production deployment is part of planning. Implementation and validation use controlled branches/artifacts. Any later production install requires explicit approval after M04/M05 evidence.
 
 ## 12. OpenSpec policy
 
-Do not create OpenSpec merely for planning or research completeness. M01 is investigation/contract discovery and does not require OpenSpec. Re-evaluate just-in-time before M02; the durable feature settings/provenance/compatibility contract and updater semantics are likely OpenSpec candidates once actual source seams are known.
+M01 is discovery and does not require OpenSpec. Re-evaluate immediately before M02. If pruning configuration, threshold semantics, persisted feature settings or cross-package updater behavior form durable external contracts, create the minimal OpenSpec required by the current workflow.
 
 ## 13. Task decomposition policy
 
-M01 is decomposed during Execution Prep into near-term research/discovery Task Cards. Later milestones remain outcome-specific until refreshed against current upstream source/runtime.
+Do not reuse the wakeup workstream's inherited M01 Task Cards. After a GREEN pre-implementation audit, prepare fresh pruning-specific M01 cards only.
+
+Later milestones remain outcome-specific until their Refresh Gate confirms the current source/runtime seams.
 
 ## 14. Fresh-context boundaries
 
-Use a fresh execution context at milestone boundaries when practical. Every milestone begins from its accepted prior GREEN checkpoint and current upstream state, not from stale chat assumptions.
+Each milestone begins from its accepted prior GREEN checkpoint and freshly verified upstream/runtime state. Historical patch internals are reference evidence, not authority over newer source structure.
