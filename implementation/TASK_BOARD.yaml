@@ -14,6 +14,8 @@ milestones:
     implementation_head: null
     handoff: null
     acceptance_evidence: null
+    review_gate: pending_required_independent_review
+    review_pointer: implementation/blockers/TP_M01_REQUIRED_INDEPENDENT_REVIEW.md
 
 cards:
   TP_M01-T01:
@@ -55,17 +57,17 @@ cards:
     evidence: implementation/evidence/TP_M01-T04_BENCHMARK_AND_REGRESSION_MATRIX.md
   TP_M01-T05:
     title: Select TP_M02 strategy and refresh runtime-delivery compatibility assumptions
-    execution_status: in_progress
+    execution_status: done
     executor: chatgpt
     depends_on:
       - TP_M01-T02
       - TP_M01-T03
       - TP_M01-T04
-    result_commit: null
+    result_commit: 1893b2c2631e571bf376f0da7f39778842259406
     result_pr: null
-    evidence: null
+    evidence: implementation/evidence/TP_M01-T05_STRATEGY_AND_COMPATIBILITY.md
 
 branch_state:
   implementation_branch: tool-output-pruning
   pull_request: null
-  note: Discovery milestone only; no pruning implementation or production/runtime mutation authorized.
+  note: All TP_M01 discovery cards have executor evidence, but milestone terminal acceptance/checkpoint is pending fresh independent review required by T02/T03/T05 and workflow review policy. No pruning implementation or production/runtime mutation authorized.
