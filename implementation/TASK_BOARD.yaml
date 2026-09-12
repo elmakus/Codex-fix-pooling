@@ -1,0 +1,71 @@
+project: Codex Fix Pooling — Tool Output Pruning
+branch: tool-output-pruning
+plan: planning/MASTER_PLAN.md
+current_milestone: TP_M01
+execution_policy: chatgpt_only
+latest_handoff: null
+active_openspec: null
+
+milestones:
+  TP_M01:
+    title: Current-baseline pruning discovery
+    execution_status: ready
+    checkpoint: TP_M01_DISCOVERY_GREEN
+    implementation_head: null
+    handoff: null
+    acceptance_evidence: null
+
+cards:
+  TP_M01-T01:
+    title: Pin baselines and map current request/context architecture
+    execution_status: ready
+    executor: null
+    depends_on: []
+    result_commit: null
+    result_pr: null
+    evidence: null
+  TP_M01-T02:
+    title: Issue strict upstream pruning-equivalence verdict
+    execution_status: planned
+    executor: null
+    depends_on:
+      - TP_M01-T01
+    result_commit: null
+    result_pr: null
+    evidence: null
+  TP_M01-T03:
+    title: Define protected-output and threshold safety contract
+    execution_status: planned
+    executor: null
+    depends_on:
+      - TP_M01-T01
+      - TP_M01-T02
+    result_commit: null
+    result_pr: null
+    evidence: null
+  TP_M01-T04:
+    title: Define effectiveness benchmark and quality regression matrix
+    execution_status: planned
+    executor: null
+    depends_on:
+      - TP_M01-T01
+      - TP_M01-T03
+    result_commit: null
+    result_pr: null
+    evidence: null
+  TP_M01-T05:
+    title: Select TP_M02 strategy and refresh runtime-delivery compatibility assumptions
+    execution_status: planned
+    executor: null
+    depends_on:
+      - TP_M01-T02
+      - TP_M01-T03
+      - TP_M01-T04
+    result_commit: null
+    result_pr: null
+    evidence: null
+
+branch_state:
+  implementation_branch: tool-output-pruning
+  pull_request: null
+  note: Discovery milestone only; no pruning implementation or production/runtime mutation authorized.
