@@ -55,8 +55,8 @@ cards:
     evidence: implementation/evidence/TP_M01-T04_BENCHMARK_AND_REGRESSION_MATRIX.md
   TP_M01-T05:
     title: Select TP_M02 strategy and refresh runtime-delivery compatibility assumptions
-    execution_status: ready
-    executor: null
+    execution_status: in_progress
+    executor: chatgpt
     depends_on:
       - TP_M01-T02
       - TP_M01-T03
