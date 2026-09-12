@@ -1,8 +1,7 @@
 project: Codex Fix Pooling — Tool Output Pruning
 branch: tool-output-pruning
-plan: planning/MASTER_PLAN.md
+plan: planning/TP_M02_BEST_EFFORT_CODEX_HANDOFF_PLAN.md
 current_milestone: TP_M02
-execution_policy: chatgpt_only
 latest_handoff: project-handoffs/TP_M01_HANDOFF.md
 active_openspec: openspec/changes/tp-m02-tool-output-pruning/
 
@@ -16,156 +15,104 @@ milestones:
     handoff: project-handoffs/TP_M01_HANDOFF.md
     acceptance_evidence: implementation/evidence/TP_M01_ACCEPTANCE.md
     review_gate: passed_required_independent_review
-    review_pointer: implementation/evidence/TP_M01_ACCEPTANCE.md
 
   TP_M02:
-    title: Pruning feature implementation
-    execution_status: blocked
-    preparation_status: complete
+    title: Best-effort always-on pruning patch and Codex handoff
+    execution_status: active
+    authoring_mode: static_best_effort
+    validation_status: uncompiled_untested_in_authoring_environment
     required_prior_checkpoint: TP_M01_DISCOVERY_GREEN
-    refreshed_upstream_base: 53ff712a48379ce8df605e292afd6046ca88ae9b
+    refreshed_upstream_base: c4017a87aacc7558002b7cb510025e967c1d765e
     community_baseline: 249cd4b64d42434f51417fec4a318750d461b676
     official_linux_package: 26.908.40834
-    strategy: REIMPLEMENT_EQUIVALENT_BEHAVIOR
+    strategy: REIMPLEMENT_EQUIVALENT_BEHAVIOR_ALWAYS_ON
+    enablement: always_on_no_disable_option
     openspec: openspec/changes/tp-m02-tool-output-pruning/
-    execution_prep_evidence: implementation/evidence/TP_M02_EXECUTION_PREP.md
-    blocker: implementation/blockers/TP_M02_CAPABILITY_GATE.md
-    blocker_reason: Current normal ChatGPT session has no cargo/rustc/rustup/container runtime and no established equivalent Rust CI test lane; chatgpt_only prohibits starting unverifiable coding or routing to Codex.
-    target_checkpoint: TP_M02_PATCH_GREEN
-    independent_milestone_review: required
+    active_plan: planning/TP_M02_BEST_EFFORT_CODEX_HANDOFF_PLAN.md
+    historical_capability_record: implementation/blockers/TP_M02_CAPABILITY_GATE.md
+    downstream_executor: Codex
+    downstream_goal: inspect_fix_if_needed_and_attempt_CE_update_plus_patched_runtime_install
 
 cards:
   TP_M01-T01:
-    title: Pin baselines and map current request/context architecture
     execution_status: done
-    executor: chatgpt
-    depends_on: []
     result_commit: d5e4f60a20cfedc4a4e350ddb3428310fc261c7f
-    result_pr: null
-    evidence: implementation/evidence/TP_M01-T01_BASELINE_ARCHITECTURE.md
   TP_M01-T02:
-    title: Issue strict upstream pruning-equivalence verdict
     execution_status: done
-    executor: chatgpt
-    depends_on:
-      - TP_M01-T01
     result_commit: 7fc54bbcd9b87a47a5e80af6aae5ac93d0a23189
-    result_pr: null
-    evidence: implementation/evidence/TP_M01-T02_PRUNING_EQUIVALENCE.md
-    independent_review: green
   TP_M01-T03:
-    title: Define protected-output and threshold safety contract
     execution_status: done
-    executor: chatgpt
-    depends_on:
-      - TP_M01-T01
-      - TP_M01-T02
     result_commit: 9be1e0474dd38186bfee6147788c3b65cf9aef38
-    result_pr: null
-    evidence: implementation/evidence/TP_M01-T03_SAFETY_CONTRACT.md
-    independent_review: green
   TP_M01-T04:
-    title: Define effectiveness benchmark and quality regression matrix
     execution_status: done
-    executor: chatgpt
-    depends_on:
-      - TP_M01-T01
-      - TP_M01-T03
     result_commit: 9a2ece083325d1d2ea8582e16572512078a5c083
-    result_pr: null
-    evidence: implementation/evidence/TP_M01-T04_BENCHMARK_AND_REGRESSION_MATRIX.md
   TP_M01-T05:
-    title: Select TP_M02 strategy and refresh runtime-delivery compatibility assumptions
     execution_status: done
-    executor: chatgpt
-    depends_on:
-      - TP_M01-T02
-      - TP_M01-T03
-      - TP_M01-T04
     result_commit: 1893b2c2631e571bf376f0da7f39778842259406
-    result_pr: null
-    evidence: implementation/evidence/TP_M01-T05_STRATEGY_AND_COMPATIBILITY.md
-    independent_review: green
 
   TP_M02-T00:
-    title: Establish verifiable exact-upstream Rust patch/test lane
-    execution_status: blocked
-    executor: null
-    depends_on: []
-    card: implementation/cards/TP_M02-T00_RUST_PATCH_TEST_LANE.md
-    blocker: implementation/blockers/TP_M02_CAPABILITY_GATE.md
-    result_commit: null
-    result_pr: null
-    evidence: null
+    title: Historical Rust patch/test capability gate
+    execution_status: superseded_as_authoring_blocker
+    note: Missing Rust/Cargo remains a validation limitation but no longer blocks static best-effort patch authoring.
   TP_M02-T01:
-    title: Add opt-in feature and fail-closed pruning policy config
-    execution_status: planned
-    executor: null
-    depends_on:
-      - TP_M02-T00
-    card: implementation/cards/TP_M02-T01_FEATURE_CONFIG.md
-    result_commit: null
-    result_pr: null
-    evidence: null
+    title: Historical opt-in feature/config card
+    execution_status: superseded
+    note: User decision is always-on pruning with no disable option; no feature/config toggle is to be implemented.
   TP_M02-T02:
-    title: Implement fail-closed output classification and identity pairing
-    execution_status: planned
-    executor: null
-    depends_on:
-      - TP_M02-T01
-    card: implementation/cards/TP_M02-T02_SAFETY_CLASSIFICATION.md
-    independent_review: recommended
-    result_commit: null
-    result_pr: null
-    evidence: null
+    title: Historical safety-classification card
+    execution_status: absorbed_into_BE_02_BE_03
   TP_M02-T03:
-    title: Implement bounded request-payload pruning core
-    execution_status: planned
-    executor: null
-    depends_on:
-      - TP_M02-T02
-    card: implementation/cards/TP_M02-T03_PRUNING_CORE.md
-    independent_review: recommended
-    result_commit: null
-    result_pr: null
-    evidence: null
+    title: Historical pruning-core card
+    execution_status: absorbed_into_BE_02_BE_03
   TP_M02-T04:
-    title: Integrate pruning across initial and retry request construction
-    execution_status: planned
-    executor: null
-    depends_on:
-      - TP_M02-T03
-    card: implementation/cards/TP_M02-T04_REQUEST_INTEGRATION.md
-    independent_review: recommended
-    result_commit: null
-    result_pr: null
-    evidence: null
+    title: Historical request-integration card
+    execution_status: absorbed_into_BE_02_BE_03
   TP_M02-T05:
-    title: Complete R19 semantic/regression suite
-    execution_status: planned
-    executor: null
-    depends_on:
-      - TP_M02-T04
-    card: implementation/cards/TP_M02-T05_R19_REGRESSION.md
-    result_commit: null
-    result_pr: null
-    evidence: null
+    title: Historical local R19 validation card
+    execution_status: superseded_by_downstream_validation_intent
   TP_M02-T06:
-    title: Freeze patch provenance and integrated acceptance package
-    execution_status: planned
-    executor: null
-    depends_on:
-      - TP_M02-T05
-    card: implementation/cards/TP_M02-T06_PROVENANCE_ACCEPTANCE.md
-    independent_review: required_at_milestone_acceptance
+    title: Historical milestone acceptance package
+    execution_status: superseded_by_BE_04_BE_05
+
+  BE-01:
+    title: Refresh and freeze exact source seams
+    execution_status: in_progress
+    executor: chatgpt
+    depends_on: []
     result_commit: null
-    result_pr: null
+    evidence: null
+  BE-02:
+    title: Author minimal always-on best-effort patch
+    execution_status: planned
+    executor: chatgpt
+    depends_on: [BE-01]
+    result_commit: null
+    evidence: null
+  BE-03:
+    title: Static adversarial patch review and correction
+    execution_status: planned
+    executor: chatgpt
+    depends_on: [BE-02]
+    result_commit: null
+    evidence: null
+  BE-04:
+    title: Produce Codex execution and Community integration/install handoff
+    execution_status: planned
+    executor: chatgpt
+    depends_on: [BE-03]
+    result_commit: null
+    evidence: null
+  BE-05:
+    title: Reconcile downstream compile/runtime/install results
+    execution_status: waiting_for_downstream
+    executor: chatgpt
+    depends_on: [BE-04]
+    result_commit: null
     evidence: null
 
 branch_state:
   implementation_branch: tool-output-pruning
   pull_request: null
   checkpoint_tag_created: false
-  checkpoint_tag_note: TP_M01_DISCOVERY_GREEN remains a durable logical checkpoint; no physical Git tag is claimed.
-  preparation_start_head: 91366ae4a0a2060f7e26662e19201159aa15a46b
-  note: TP_M02 execution preparation and JIT OpenSpec are durable. Refresh Gate is GREEN after bounded TUI-only upstream drift reconciliation. Coding is blocked by TP_M02-T00 capability gate. No pruning implementation, upstream/Community source mutation, custom runtime build/install/substitution, deployment or TP_M03 work has started.
+  strategy_pivot_date: 2026-09-12
+  note: Static patch authoring is authorized despite missing Rust/Cargo. The resulting bundle must stay explicitly BEST_EFFORT / UNCOMPILED / UNTESTED until downstream evidence exists. Do not write to openai/codex, tekacs/codex, or ilysenko/codex-desktop-linux. Codex is expected to independently inspect/fix the handoff and attempt CE update plus patched runtime integration with rollback.
