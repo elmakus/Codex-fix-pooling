@@ -34,8 +34,8 @@ cards:
     openspec: null
   M01-T03:
     title: Audit runtime override, feature, and update persistence seams
-    execution_status: ready
-    executor: null
+    execution_status: in_progress
+    executor: chatgpt
     depends_on: [M01-T01]
     card: implementation/cards/M01-T03.md
     result_commit: null
