@@ -45,17 +45,17 @@ cards:
     evidence: implementation/evidence/TP_M01-T03_SAFETY_CONTRACT.md
   TP_M01-T04:
     title: Define effectiveness benchmark and quality regression matrix
-    execution_status: in_progress
+    execution_status: done
     executor: chatgpt
     depends_on:
       - TP_M01-T01
       - TP_M01-T03
-    result_commit: null
+    result_commit: 9a2ece083325d1d2ea8582e16572512078a5c083
     result_pr: null
-    evidence: null
+    evidence: implementation/evidence/TP_M01-T04_BENCHMARK_AND_REGRESSION_MATRIX.md
   TP_M01-T05:
     title: Select TP_M02 strategy and refresh runtime-delivery compatibility assumptions
-    execution_status: planned
+    execution_status: ready
     executor: null
     depends_on:
       - TP_M01-T02
