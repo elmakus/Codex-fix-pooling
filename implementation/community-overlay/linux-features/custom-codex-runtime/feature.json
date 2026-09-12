@@ -1,0 +1,18 @@
+{
+  "id": "custom-codex-runtime",
+  "title": "Custom Codex Runtime",
+  "description": "Opt-in, fail-closed replacement of the verified official candidate resources/codex with an admitted custom runtime.",
+  "defaultEnabled": false,
+  "entrypoints": {
+    "stageHook": "./stage.sh"
+  },
+  "runtimeHooks": {
+    "prelaunch": "./diagnose-overrides.sh"
+  },
+  "resources": [],
+  "packageResources": [],
+  "packageDependencies": {},
+  "packageHooks": [],
+  "requires": [],
+  "conflicts": []
+}
