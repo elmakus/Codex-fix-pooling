@@ -7,8 +7,9 @@ Apply in this order against the exact base (or inspect/adapt if upstream has dri
 
 1. `implementation/patches/TP_M02_OPENAI_CODEX_c4017a87_TOOL_OUTPUT_PRUNING.patch`
 2. `implementation/patches/TP_M02_0002_STATIC_REVIEW_FIXES.patch`
+3. `implementation/patches/TP_M02_0003_TEST_TYPE_FIX.patch`
 
-The second patch is not optional. It contains findings from the adversarial static review: fail-closed checked token aggregation and stricter contextual-user boundary handling.
+All three series members are mandatory. `0002` contains adversarial-review safety fixes (fail-closed checked token aggregation and stricter contextual-user boundary handling). `0003` aligns the authored `ToolSearchOutput` protection test with the exact current `status: Option<String>` representation observed on the pinned upstream.
 
 The resulting intended source change is minimal:
 
@@ -18,4 +19,4 @@ The resulting intended source change is minimal:
 
 No feature flag, `/experimental` entry, config key, config schema or runtime disable path is part of this patch series.
 
-The tests are embedded in `tool_output_prune.rs` under `#[cfg(test)]`. They were authored but were **not executed** in the ChatGPT authoring environment.
+The tests are embedded in `tool_output_prune.rs` under `#[cfg(test)]`. They were authored but were **not compiled or executed** in the ChatGPT authoring environment.
