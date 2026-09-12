@@ -18,15 +18,15 @@ milestones:
 cards:
   TP_M01-T01:
     title: Pin baselines and map current request/context architecture
-    execution_status: in_progress
+    execution_status: done
     executor: chatgpt
     depends_on: []
-    result_commit: null
+    result_commit: d5e4f60a20cfedc4a4e350ddb3428310fc261c7f
     result_pr: null
-    evidence: null
+    evidence: implementation/evidence/TP_M01-T01_BASELINE_ARCHITECTURE.md
   TP_M01-T02:
     title: Issue strict upstream pruning-equivalence verdict
-    execution_status: planned
+    execution_status: ready
     executor: null
     depends_on:
       - TP_M01-T01
