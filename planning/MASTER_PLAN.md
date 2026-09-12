@@ -10,13 +10,17 @@ Deliver a maintainable, opt-in integration for ChatGPT Community for Linux that 
 
 `ilysenko/codex-desktop-linux` verifies and repackages OpenAI's signed official Linux `.deb` and normally reuses the official bundled Codex executable at `resources/codex`.
 
-Its Linux feature framework supports opt-in staged resources, runtime hooks, package hooks and custom build/install hooks. Native update reconstruction preserves selected feature configuration.
+Its Linux feature framework supports opt-in staged resources, runtime hooks, package hooks and custom build/install hooks. Native update reconstruction preserves selected feature configuration. As of audited upstream `ilysenko/codex-desktop-linux@249cd4b64d42434f51417fec4a318750d461b676`, the packaged update-builder extracts the newly verified official payload and applies only locally enabled features; update promotion is atomic and retains the immediately previous managed package as rollback target.
 
 ### Source patch
 
 `tekacs/codex@9ffcf8db9078eae43d4111ff94259795c1e962c9` adds pushed completion input for background unified-exec commands, waking idle sessions and delivering completion to active turns while avoiding duplicate completion when the initial call already returned the terminal result. Tool descriptions are also changed to discourage empty polling.
 
 The patch is explicitly maintenance-only until upstream provides strictly equivalent behavior.
+
+### Current upstream freshness note
+
+The pre-implementation audit observed `openai/codex@89c8bcf37d64be69e4c8286f4541c1a84ed312a4` on 2026-09-12. Current source still exposes the ordinary unified-exec tool description rather than the patch's completion-notification guidance, so strict upstream equivalence is not established by source inspection. M01 must perform the complete behavioral/source equivalence check against the exact baseline it acquires; absence of one marker is evidence against equivalence, not a substitute for the full gate.
 
 ## 3. Target state
 
@@ -34,28 +38,25 @@ An opt-in Community Edition feature, provisionally named `custom-codex-runtime`,
 ## 4. Frozen architecture decisions
 
 ### A1 — Feature, not post-install hack
-
 The normal mechanism must be an opt-in Community build/package feature. Manual edits under `/opt/codex-desktop` are not the target architecture.
 
 ### A2 — Generic runtime override boundary
-
-The integration is generic `custom-codex-runtime` infrastructure. `tekacs/codex` is the initial source/preset, not a permanent hard-coded dependency.
+The integration is generic `custom-codex-runtime` infrastructure. `tekacs/codex` is the reference patch source, not a permanent hard-coded dependency.
 
 ### A3 — Official package remains provenance baseline
-
 Do not bypass or weaken the existing signed OpenAI package verification path.
 
 ### A4 — Compatibility before substitution
-
 Replacement runtime selection is conditional on a deterministic compatibility gate. Unknown compatibility means no replacement.
 
 ### A5 — Upstream-first retirement
-
 If current official Codex proves behaviorally equivalent to the patch, do not maintain unnecessary divergence.
 
 ### A6 — Atomic delivery
-
 Normal deployment is through a rebuilt package/app artifact with rollback, not piecemeal mutation of a running installation.
+
+### A7 — Controlled patch carrier
+Unless M01 discovers a concrete reason not to, prefer an owned `elmakus/codex` fork as the maintained patch carrier. `tekacs/codex` remains authoritative provenance for the original fix, while an owned fork gives the project explicit control over baseline rebases, provenance, CI and retirement. This is not authorization to create/rebase the fork during M01 discovery.
 
 ## 5. Non-goals
 
@@ -73,16 +74,19 @@ Normal deployment is through a rebuilt package/app artifact with rollback, not p
 - Disabling the feature must restore the stock bundled runtime path on the next rebuild.
 - Updates must re-evaluate compatibility; prior compatibility cannot be assumed for a new official package.
 - Runtime behavior equivalent to R4 must be testable independently from the GUI.
+- Compatibility is tied to an exact official Desktop package identity and bundled-runtime identity, not merely a human-readable version string.
+- A custom runtime is eligible only when its upstream source baseline is deterministically tied to, or otherwise proven compatible with, the official bundled runtime by the M01 gate. Ambiguous mapping is not success.
+- Patch refresh is baseline-relative: each new official package requires upstream-equivalence detection first, then patch application/rebase and the full compatibility/acceptance gate if divergence is still needed.
 
 ## 7. Known source seams
 
 Current likely integration seams in `ilysenko/codex-desktop-linux`:
 
-- upstream payload verification/extraction in `scripts/lib/upstream-linux-package.sh`;
+- upstream package metadata, trust verification and extraction path;
 - official runtime location `resources/codex`;
 - `linux-features/` feature framework and build/install hooks;
-- package/update reconstruction which preserves enabled feature configuration;
-- existing `CODEX_CLI_PATH` handling in selected integrations such as shared app-server socket / Nix paths.
+- `packaging/update-builder/` plus `codex-update-manager` rebuild/promotion/rollback flow;
+- existing `CODEX_CLI_PATH` handling in Nix and selected features such as shared app-server socket.
 
 These are candidate seams only. Exact implementation seams must be refreshed against current `main` immediately before implementation.
 
@@ -90,21 +94,32 @@ These are candidate seams only. Exact implementation seams must be refreshed aga
 
 ### M01 — Baseline and compatibility discovery
 
-Outcome: establish a deterministic mapping/check between the official bundled Codex runtime shipped with the current OpenAI Linux Desktop package and a source/runtime baseline suitable for carrying the patch.
+Outcome: establish the evidence and deterministic gate needed before any custom runtime feature is designed or implemented.
 
 Work includes:
 
-- inspect current official bundled `resources/codex` metadata/version/build identity;
-- determine whether a source revision can be mapped reliably;
-- verify whether current official Codex already contains equivalent wakeup behavior;
-- define the compatibility gate inputs and failure modes;
-- decide whether initial source ownership remains `tekacs/codex` or moves to an owned `elmakus/codex` fork.
+- trace exactly how current `codex-desktop-linux` discovers, verifies, extracts, stages and packages official `resources/codex`, including architecture-specific package identity;
+- establish the relationship between official Linux Desktop package identity and bundled Codex runtime identity/version;
+- determine whether the bundled runtime can be mapped deterministically to an `openai/codex` source revision; if not, define the strongest safe alternative identity/compatibility proof and treat unresolved ambiguity as fail-closed;
+- inventory the Desktop/app-server protocol surface actually exercised by the current Desktop baseline and identify drift-sensitive seams relevant to runtime substitution;
+- inspect `CODEX_CLI_PATH`, the Linux feature framework and `codex-update-manager`/packaged update-builder to establish the later substitution and update-persistence constraints without implementing them;
+- perform strict upstream-equivalence analysis for the referenced wakeup patch against the exact current source/runtime baseline;
+- define the patch refresh/rebase lifecycle for each new official baseline, including the upstream-equivalence retirement check;
+- confirm the controlled patch-carrier decision (`elmakus/codex` preferred unless evidence favors another approach);
+- define a concrete compatibility gate and the minimum acceptance/test matrix required before M02 may design substitution.
 
 Acceptance:
 
-- compatibility strategy is evidence-backed and documented;
-- no implementation assumption depends on an unverified version mapping;
-- upstream-equivalence verdict is explicit for the tested baseline.
+- exact audited `codex-desktop-linux` commit and official package identity are recorded;
+- the path by which `resources/codex` reaches the Community package is evidence-backed;
+- bundled runtime identity and source-revision mapping have an explicit verdict: deterministic, safely derivable by a documented procedure, or unavailable;
+- protocol/app-server compatibility risks and drift-sensitive surfaces are documented for the tested baseline;
+- `CODEX_CLI_PATH`, feature persistence and update-builder/update-manager constraints are documented from current source;
+- strict upstream-equivalence verdict is explicit for the tested baseline and covers all R4 semantics, not only source-patch presence;
+- patch-carrier and refresh strategy are explicit;
+- compatibility gate has concrete inputs, pass/fail/unknown semantics and fail-closed behavior;
+- minimum M02 prerequisite test matrix is documented;
+- no implementation assumption depends on an unverified version mapping.
 
 Checkpoint: `M01_BASELINE_GREEN` when all acceptance evidence is durable.
 
@@ -112,18 +127,9 @@ Checkpoint: `M01_BASELINE_GREEN` when all acceptance evidence is durable.
 
 Outcome: define and implement the opt-in `custom-codex-runtime` feature boundary in a development fork/branch without touching the user's installed production Community runtime.
 
-Work includes:
-
-- feature manifest/settings contract;
-- source/ref/provenance configuration;
-- build or artifact acquisition path;
-- substitution/redirection mechanism;
-- fail-closed handling;
-- build metadata recording;
-- feature disable/stock-runtime restoration path.
+Work includes feature manifest/settings contract, source/ref/provenance configuration, build or artifact acquisition path, substitution/redirection mechanism, fail-closed handling, build metadata recording and feature disable/stock-runtime restoration path.
 
 Acceptance:
-
 - feature disabled => stock package behavior;
 - feature enabled with compatible custom runtime => rebuilt artifact selects expected runtime;
 - incompatible/unknown runtime => build/update refuses custom substitution;
@@ -135,19 +141,11 @@ Checkpoint: `M02_FEATURE_GREEN`.
 
 Outcome: prove the replacement runtime implements the intended wakeup semantics rather than merely compiling.
 
-Work includes:
-
-- carry/reproduce patch-level tests;
-- short inline command case;
-- yielding background command case;
-- idle wakeup and active-turn pushed completion;
-- duplicate suppression;
-- interactive/intermediate-output `write_stdin` case.
+Work includes patch-level tests, short inline command, yielding background command, idle wakeup, active-turn pushed completion, duplicate suppression and interactive/intermediate-output `write_stdin`.
 
 Acceptance:
-
 - all R4/R14 behavior is demonstrated with repeatable tests;
-- failure output is diagnostic enough to distinguish protocol failure from wakeup-behavior failure.
+- failure output distinguishes protocol failure from wakeup-behavior failure.
 
 Checkpoint: `M03_WAKEUP_GREEN`.
 
@@ -155,49 +153,34 @@ Checkpoint: `M03_WAKEUP_GREEN`.
 
 Outcome: verify the patched runtime works with ChatGPT Community Desktop/app-server on a controlled test artifact.
 
-Work includes:
-
-- Desktop startup;
-- app-server handshake/session initialization;
-- ordinary command execution;
-- background completion wakeup through the Desktop-owned session path;
-- no regression in explicit `write_stdin` interaction;
-- feature disable rollback check.
+Work includes Desktop startup, app-server handshake/session initialization, ordinary command execution, background completion wakeup through the Desktop-owned session path, `write_stdin` regression check and feature-disable rollback check.
 
 Acceptance:
-
 - integration smoke matrix passes;
-- no production install is required to obtain evidence if a safe test environment is available;
+- no production install is required if a safe test environment can provide evidence;
 - protocol/runtime skew failure is detected rather than masked.
 
 Checkpoint: `M04_DESKTOP_GREEN`.
 
 ### M05 — Update persistence and refresh gate
 
-Outcome: prove that a new official OpenAI package causes the Community rebuild path to preserve feature intent while re-running compatibility/patch decisions rather than blindly reusing an old runtime.
+Outcome: prove that a new official OpenAI package preserves feature intent while re-running equivalence, patch refresh and compatibility decisions instead of blindly reusing an old runtime.
 
-Work includes:
-
-- updater feature-state persistence;
-- changed-upstream compatibility re-evaluation;
-- patch rebase/refresh behavior;
-- upstream-equivalence retirement path;
-- rollback to previous known-good package.
+Work includes updater feature-state persistence, changed-upstream compatibility re-evaluation, patch rebase/refresh, upstream-equivalence retirement and rollback to previous known-good package.
 
 Acceptance:
-
 - at least one controlled update/rebuild scenario passes;
 - stale custom runtime cannot be silently carried across an incompatible baseline;
-- upstream equivalence can disable/remove the custom divergence cleanly.
+- upstream equivalence can retire custom divergence cleanly;
+- failed refresh leaves the current working package intact and produces diagnostic evidence.
 
 Checkpoint: `M05_UPDATE_GREEN`.
 
 ### M06 — Upstreamability decision and release
 
-Outcome: decide whether the generic feature is suitable for contribution to `ilysenko/codex-desktop-linux` or should remain a private/local feature, then prepare the chosen delivery path.
+Outcome: decide whether the generic feature is suitable for contribution to `ilysenko/codex-desktop-linux` or should remain private/local, then prepare the chosen delivery path.
 
 Acceptance:
-
 - design/maintenance burden and security implications are reviewed;
 - upstream/local decision is recorded;
 - documentation covers enable/disable, provenance, compatibility failures, update behavior and rollback;
@@ -219,33 +202,30 @@ Before executing any milestone, decompose its owned requirements into Task Cards
 
 ## 10. Deployment / migration strategy
 
-There is no production migration in the planning phase.
-
-Implementation and testing should use isolated branches/build artifacts first. Production installation, if later approved, should happen only after M04/M05 evidence establishes Desktop compatibility and update behavior.
-
-Rollback must retain either the stock official-runtime Community build or the immediately previous known-good managed package.
+There is no production migration in the planning phase. Implementation and testing use isolated branches/build artifacts first. Production installation, if later approved, happens only after M04/M05 evidence establishes Desktop compatibility and update behavior. Rollback retains either the stock official-runtime Community build or the immediately previous known-good managed package.
 
 ## 11. Verification strategy
 
 Verification layers:
+1. exact official package/runtime identity and source-baseline evidence;
+2. protocol/schema/app-server compatibility checks;
+3. source/patch unit tests;
+4. custom-runtime build identity and provenance verification;
+5. CLI/unified-exec behavioral tests;
+6. Desktop/app-server integration smoke tests;
+7. package feature on/off tests;
+8. update/rebuild compatibility refresh test;
+9. final controlled install/readback only when explicitly approved.
 
-1. source/patch unit tests;
-2. custom-runtime build identity and provenance verification;
-3. CLI/unified-exec behavioral tests;
-4. Desktop/app-server integration smoke tests;
-5. package feature on/off tests;
-6. update/rebuild compatibility refresh test;
-7. final controlled install/readback only when explicitly approved.
+The compatibility gate must distinguish `PASS`, `FAIL`, and `UNKNOWN`; both `FAIL` and `UNKNOWN` prohibit custom substitution.
 
 ## 12. OpenSpec policy
 
-Do not create OpenSpec merely for planning completeness.
-
-Create an OpenSpec change just-in-time if implementation introduces a durable behavior/configuration/schema contract across components, especially the feature settings schema, compatibility metadata contract or updater behavior. The Refresh Gate at execution prep decides the exact OpenSpec need against then-current source state.
+Do not create OpenSpec merely for planning or research completeness. M01 is investigation/contract discovery and does not require OpenSpec. Re-evaluate just-in-time before M02; the durable feature settings/provenance/compatibility contract and updater semantics are likely OpenSpec candidates once actual source seams are known.
 
 ## 13. Task decomposition policy
 
-No Task Board or implementation cards are created yet. The next workflow stage is pre-implementation plan audit, then Execution Prep for M01. M01 cards should be detailed; later milestones should remain outcome-specific until refreshed against current upstream source/runtime.
+M01 is decomposed during Execution Prep into near-term research/discovery Task Cards. Later milestones remain outcome-specific until refreshed against current upstream source/runtime.
 
 ## 14. Fresh-context boundaries
 
