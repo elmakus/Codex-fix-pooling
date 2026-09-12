@@ -8,6 +8,7 @@ const path = require("node:path");
 const FEATURE_ID = "custom-codex-runtime";
 const SHA256_RE = /^[0-9a-f]{64}$/;
 const GIT_SHA_RE = /^[0-9a-f]{40}$/;
+const ALLOWED_GATE_STATES = new Set(["PASS", "FAIL", "UNKNOWN"]);
 const ALLOWED_SETTING_KEYS = new Set([
   "provider",
   "source_repository",
@@ -78,14 +79,10 @@ function validateSettings(settings) {
   if (normalized.provider !== "managed-artifact") {
     fail("settings.provider must be 'managed-artifact'");
   }
-  if (!/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:\.git)?$/.test(normalized.source_repository)) {
-    fail("settings.source_repository must be an https GitHub repository URL");
-  }
-  if (!/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:\.git)?$/.test(normalized.upstream_repository)) {
-    fail("settings.upstream_repository must be an https GitHub repository URL");
-  }
-  if (!/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:\.git)?$/.test(normalized.patch_source_repository)) {
-    fail("settings.patch_source_repository must be an https GitHub repository URL");
+  for (const key of ["source_repository", "upstream_repository", "patch_source_repository"]) {
+    if (!/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:\.git)?$/.test(normalized[key])) {
+      fail(`settings.${key} must be an https GitHub repository URL`);
+    }
   }
   if (!GIT_SHA_RE.test(normalized.upstream_ref)) {
     fail("settings.upstream_ref must be a full 40-character Git SHA");
@@ -159,10 +156,20 @@ function readOfficialBaseline(env, stockRuntime, communitySource) {
   };
 }
 
+function targetTripleMatchesArchitecture(targetTriple, architecture) {
+  if (["amd64", "x86_64"].includes(architecture)) {
+    return targetTriple.startsWith("x86_64-");
+  }
+  if (["arm64", "aarch64"].includes(architecture)) {
+    return targetTriple.startsWith("aarch64-");
+  }
+  return false;
+}
+
 function validateProvenance(provenance, settings, baseline, artifactPath) {
   assertPlainObject(provenance, "runtime provenance");
   const gateState = requireString(provenance.gate_state, "provenance.gate_state");
-  if (!["PASS", "FAIL", "UNKNOWN"].includes(gateState)) {
+  if (!ALLOWED_GATE_STATES.has(gateState)) {
     fail("provenance.gate_state must be PASS, FAIL, or UNKNOWN");
   }
   if (gateState !== "PASS") {
@@ -183,6 +190,9 @@ function validateProvenance(provenance, settings, baseline, artifactPath) {
     if (provenance[key] !== expected) {
       fail(`provenance.${key} does not match controlled feature settings`);
     }
+  }
+  if (!targetTripleMatchesArchitecture(settings.target_triple, baseline.architecture)) {
+    fail(`settings.target_triple ${settings.target_triple} does not match official package architecture ${baseline.architecture}`);
   }
 
   const resolvedSource = requireString(provenance.resolved_source_commit, "provenance.resolved_source_commit");
@@ -221,10 +231,52 @@ function validateProvenance(provenance, settings, baseline, artifactPath) {
   return { ...provenance, runtime_sha256: actualArtifactSha };
 }
 
-function writeDiagnostics(installDir, value) {
-  const output = path.join(installDir, ".codex-linux", "custom-codex-runtime.json");
-  fs.mkdirSync(path.dirname(output), { recursive: true });
-  fs.writeFileSync(output, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+function diagnosticOutputPaths(installDir, env) {
+  const outputs = [];
+  if (installDir) {
+    outputs.push(path.join(installDir, ".codex-linux", "custom-codex-runtime.json"));
+  }
+  const patchReport = env.CODEX_PATCH_REPORT_JSON?.trim();
+  if (patchReport) {
+    outputs.push(path.join(path.dirname(path.resolve(patchReport)), "custom-codex-runtime.json"));
+  }
+  return [...new Set(outputs)];
+}
+
+function writeDiagnostics(installDir, value, env = process.env) {
+  for (const output of diagnosticOutputPaths(installDir, env)) {
+    fs.mkdirSync(path.dirname(output), { recursive: true });
+    fs.writeFileSync(output, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  }
+}
+
+function writeRejectionDiagnostics(env, error) {
+  let reportedGateState = "UNKNOWN";
+  const provenancePath = env.CODEX_CUSTOM_CODEX_RUNTIME_PROVENANCE?.trim();
+  if (provenancePath && fs.existsSync(provenancePath)) {
+    try {
+      const provenance = JSON.parse(fs.readFileSync(provenancePath, "utf8"));
+      if (ALLOWED_GATE_STATES.has(provenance?.gate_state)) {
+        reportedGateState = provenance.gate_state;
+      }
+    } catch {
+      // Malformed provenance remains UNKNOWN and fail-closed.
+    }
+  }
+  const installDir = env.INSTALL_DIR?.trim() ? path.resolve(env.INSTALL_DIR.trim()) : null;
+  writeDiagnostics(installDir, {
+    schema_version: 1,
+    feature: FEATURE_ID,
+    state: "REJECTED",
+    gate_state: reportedGateState,
+    reason: String(error?.message ?? error),
+    official_metadata_path: env.CODEX_UPSTREAM_LINUX_METADATA_JSON ?? null,
+    runtime_provenance_path: provenancePath || null,
+    explicit_override_environment_at_build: {
+      CODEX_CLI_PATH: env.CODEX_CLI_PATH ?? null,
+      CODEX_REMOTE_CONTROL_CODEX_PATH: env.CODEX_REMOTE_CONTROL_CODEX_PATH ?? null,
+    },
+  }, env);
 }
 
 function replaceCandidateRuntime(installDir, artifactPath) {
@@ -283,13 +335,18 @@ function main(env = process.env) {
       CODEX_CLI_PATH: env.CODEX_CLI_PATH ?? null,
       CODEX_REMOTE_CONTROL_CODEX_PATH: env.CODEX_REMOTE_CONTROL_CODEX_PATH ?? null,
     },
-  });
+  }, env);
 }
 
 if (require.main === module) {
   try {
     main();
   } catch (error) {
+    try {
+      writeRejectionDiagnostics(process.env, error);
+    } catch (diagnosticError) {
+      console.error(`WARN: ${FEATURE_ID}: could not persist rejection diagnostics: ${diagnosticError.message}`);
+    }
     console.error(`ERROR: ${error.message}`);
     process.exit(1);
   }
@@ -298,9 +355,13 @@ if (require.main === module) {
 module.exports = {
   ALLOWED_SETTING_KEYS,
   communitySourceInfo,
+  diagnosticOutputPaths,
   readOfficialBaseline,
   replaceCandidateRuntime,
   sha256File,
+  targetTripleMatchesArchitecture,
   validateProvenance,
   validateSettings,
+  writeDiagnostics,
+  writeRejectionDiagnostics,
 };
