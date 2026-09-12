@@ -54,11 +54,11 @@ cards:
     openspec: null
   M01-T05:
     title: Freeze compatibility gate and minimum M02 test matrix
-    execution_status: in_progress
+    execution_status: done
     executor: chatgpt
     depends_on: [M01-T02, M01-T03, M01-T04]
     card: implementation/cards/M01-T05.md
-    result_commit: null
+    result_commit: e0509a93cc2c02320a7deec042666a6de791a963
     result_pr: null
-    evidence: null
+    evidence: implementation/evidence/M01-T05_COMPATIBILITY_GATE.md
     openspec: null
