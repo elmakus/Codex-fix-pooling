@@ -1,0 +1,12 @@
+diff --git a/codex-rs/core/src/tool_output_prune.rs b/codex-rs/core/src/tool_output_prune.rs
+--- a/codex-rs/core/src/tool_output_prune.rs
++++ b/codex-rs/core/src/tool_output_prune.rs
+@@ -519,7 +519,7 @@ mod tests {
+         let tool_search = ResponseItem::ToolSearchOutput {
+             id: None,
+             call_id: Some("search".to_string()),
+-            status: "completed".to_string(),
++            status: None,
+             execution: "tool-search".to_string(),
+             tools: vec![serde_json::json!({"name": "sentinel"})],
+             internal_chat_message_metadata_passthrough: None,
