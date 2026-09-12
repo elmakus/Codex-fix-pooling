@@ -82,17 +82,17 @@ cards:
     openspec: null
   M02-T02:
     title: Freeze feature/settings/provenance contract in OpenSpec
-    execution_status: in_progress
+    execution_status: done
     executor: chatgpt
     depends_on: [M02-T01]
     card: implementation/cards/M02-T02.md
-    result_commit: null
+    result_commit: 818688cd49058d5b52fdfdf3d2ddcc0524a7d746
     result_pr: null
-    evidence: null
+    evidence: implementation/evidence/M02-T02_OPENSPEC.md
     openspec: openspec/changes/custom-codex-runtime-m02
   M02-T03:
     title: Establish controlled Codex carrier and reproducible runtime build provenance
-    execution_status: planned
+    execution_status: ready
     executor: null
     depends_on: [M02-T02]
     card: implementation/cards/M02-T03.md
