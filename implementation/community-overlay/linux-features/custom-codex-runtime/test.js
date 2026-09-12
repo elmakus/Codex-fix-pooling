@@ -10,8 +10,10 @@ const test = require("node:test");
 const {
   replaceCandidateRuntime,
   sha256File,
+  targetTripleMatchesArchitecture,
   validateProvenance,
   validateSettings,
+  writeRejectionDiagnostics,
 } = require("./stage.js");
 
 const BASE_SETTINGS = {
@@ -91,11 +93,27 @@ test("settings reject non-pinned upstream and patch refs", () => {
   assert.throws(() => validateSettings({ ...BASE_SETTINGS, patch_source_ref: "latest" }), /full 40-character Git SHA/);
 });
 
+test("target triple must match official package architecture", () => {
+  assert.equal(targetTripleMatchesArchitecture("x86_64-unknown-linux-gnu", "amd64"), true);
+  assert.equal(targetTripleMatchesArchitecture("aarch64-unknown-linux-gnu", "arm64"), true);
+  assert.equal(targetTripleMatchesArchitecture("aarch64-unknown-linux-gnu", "amd64"), false);
+});
+
 test("PASS provenance bound to the exact baseline admits the exact artifact", () => {
   withTempDir((root) => {
     const artifact = writeArtifact(root);
     const validated = validateProvenance(provenanceFor(artifact), BASE_SETTINGS, BASELINE, artifact);
     assert.equal(validated.runtime_sha256, sha256File(artifact));
+  });
+});
+
+test("architecture mismatch rejects admission", () => {
+  withTempDir((root) => {
+    const artifact = writeArtifact(root);
+    assert.throws(
+      () => validateProvenance(provenanceFor(artifact), BASE_SETTINGS, { ...BASELINE, architecture: "arm64" }, artifact),
+      /does not match official package architecture/,
+    );
   });
 });
 
@@ -146,6 +164,28 @@ test("candidate replacement changes only resources/codex and final digest matche
     assert.equal(target, path.join(installDir, "resources", "codex"));
     assert.equal(sha256File(target), sha256File(artifact));
     assert.equal(fs.readFileSync(path.join(installDir, "resources", "sentinel"), "utf8"), "keep\n");
+  });
+});
+
+test("rejection diagnostics survive outside a disposable candidate", () => {
+  withTempDir((root) => {
+    const installDir = path.join(root, "candidate");
+    const transactionDir = path.join(root, "reports", "transactions", "test");
+    const provenancePath = path.join(root, "provenance.json");
+    fs.mkdirSync(transactionDir, { recursive: true });
+    fs.writeFileSync(provenancePath, JSON.stringify({ gate_state: "FAIL" }));
+
+    writeRejectionDiagnostics({
+      INSTALL_DIR: installDir,
+      CODEX_PATCH_REPORT_JSON: path.join(transactionDir, "patch-report.json"),
+      CODEX_CUSTOM_CODEX_RUNTIME_PROVENANCE: provenancePath,
+    }, new Error("synthetic rejection"));
+
+    const candidateDiagnostic = JSON.parse(fs.readFileSync(path.join(installDir, ".codex-linux", "custom-codex-runtime.json"), "utf8"));
+    const transactionDiagnostic = JSON.parse(fs.readFileSync(path.join(transactionDir, "custom-codex-runtime.json"), "utf8"));
+    assert.equal(candidateDiagnostic.state, "REJECTED");
+    assert.equal(transactionDiagnostic.gate_state, "FAIL");
+    assert.match(transactionDiagnostic.reason, /synthetic rejection/);
   });
 });
 
