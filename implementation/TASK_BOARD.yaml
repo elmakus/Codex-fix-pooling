@@ -93,18 +93,18 @@ cards:
     openspec: openspec/changes/custom-codex-runtime-m02
   M02-T03:
     title: Prepare runtime patch provenance and carrier recipe
-    execution_status: in_progress
+    execution_status: done
     executor: chatgpt
     depends_on: [M02-T02]
     card: implementation/cards/M02-T03.md
-    result_commit: null
+    result_commit: ea0bbd0d1d3e8ea9ad695e6aa004b5b21afab426
     result_pr: null
-    evidence: null
+    evidence: implementation/evidence/M02-T03_RUNTIME_PATCH_PREPARATION.md
     openspec: openspec/changes/custom-codex-runtime-m02
   M02-T04:
     title: Prepare best-effort custom-codex-runtime Community patch
-    execution_status: planned
-    executor: null
+    execution_status: in_progress
+    executor: chatgpt
     depends_on: [M02-T02, M02-T03]
     card: implementation/cards/M02-T04.md
     result_commit: null
