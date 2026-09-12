@@ -26,14 +26,14 @@
 
 ## M02-T05 — Codex MVP handoff
 
-- [ ] Assemble exact runtime and Community patch/change-set pointers.
-- [ ] Record exact target base SHAs and immutable provenance.
-- [ ] Provide ordered Codex steps: inspect, refresh, apply/adapt, build, record identity, package, test, repair, report.
-- [ ] Provide PASS/FAIL/UNKNOWN package-mechanics checklist.
-- [ ] Provide wakeup-semantic, Desktop integration and changed-baseline/update verification checklist without claiming those milestones complete.
-- [ ] Explicitly distinguish ChatGPT-prepared source work from Codex-proven runtime/build evidence.
-- [ ] State that unresolved build/test failures must return exact symptoms/logs while preserving frozen invariants.
-- [ ] Leave production installation unauthorized unless separately approved by the user.
+- [x] Assemble exact runtime and Community patch/change-set pointers.
+- [x] Record exact target base SHAs and immutable provenance.
+- [x] Provide ordered Codex steps: inspect, refresh, apply/adapt, build, record identity, package, test, repair, report.
+- [x] Provide PASS/FAIL/UNKNOWN package-mechanics checklist.
+- [x] Provide wakeup-semantic, Desktop integration and changed-baseline/update verification checklist without claiming those milestones complete.
+- [x] Explicitly distinguish ChatGPT-prepared source work from Codex-proven runtime/build evidence.
+- [x] State that unresolved build/test failures must return exact symptoms/logs while preserving frozen invariants.
+- [x] Leave production installation unauthorized unless separately approved by the user.
 
 ## Deferred / Codex execution evidence
 
