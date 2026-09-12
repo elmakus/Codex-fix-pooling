@@ -4,9 +4,9 @@ Repository: `elmakus/Codex-fix-pooling`
 
 ## Current state
 
-- phase: M02 execution in progress
+- phase: M02 execution blocked on M02-T03 capability gate
 - goal: design a maintainable opt-in integration that makes the `tekacs/codex` background-exec completion wakeup patch usable from ChatGPT Community for Linux (`ilysenko/codex-desktop-linux`) without manual binary replacement after every update
-- status: `M01_BASELINE_GREEN`; M02-T01 and M02-T02 complete; M02-T03 READY
+- status: `M01_BASELINE_GREEN`; M02-T01 and M02-T02 complete; M02-T03 BLOCKED before assignment
 - execution_policy: chatgpt_only
 
 ## Canonical authority
@@ -19,7 +19,7 @@ Repository: `elmakus/Codex-fix-pooling`
 - milestone file: `implementation/milestones/M02_FEATURE_CONTRACT_AND_BUILD_PATH.md`
 - task board: `implementation/TASK_BOARD.yaml`
 - completed M02 cards: `implementation/cards/M02-T01.md`, `implementation/cards/M02-T02.md`
-- first ready card: `implementation/cards/M02-T03.md`
+- blocked card: `implementation/cards/M02-T03.md`
 - latest cumulative handoff: `project-handoffs/M01_HANDOFF.md`
 - active OpenSpec change: `openspec/changes/custom-codex-runtime-m02`
 
@@ -35,6 +35,7 @@ Repository: `elmakus/Codex-fix-pooling`
 - `implementation/evidence/M01_ACCEPTANCE.md`
 - `implementation/evidence/M02-T01_RUNTIME_SELECTION.md`
 - `implementation/evidence/M02-T02_OPENSPEC.md`
+- `implementation/evidence/M02-T03_CAPABILITY_BLOCKER.md`
 
 ## Accepted decisions
 
@@ -54,8 +55,10 @@ Repository: `elmakus/Codex-fix-pooling`
 
 ## Refreshed M02 baseline
 
+- `openai/codex:main@944d6fd1ba4baab69dbedd205282dc72ec20abb5`
 - `ilysenko/codex-desktop-linux@249cd4b64d42434f51417fec4a318750d461b676`
 - official Linux Desktop baseline: `26.908.40834`
+- reference patch: `tekacs/codex@9ffcf8db9078eae43d4111ff94259795c1e962c9`
 - M02-T01 result commit: `8632f2f7ee8d04ec0024a8c4b37d02bdffd6b4e4`
 - M02-T02 result commit: `818688cd49058d5b52fdfdf3d2ddcc0524a7d746`
 
@@ -69,9 +72,11 @@ Repository: `elmakus/Codex-fix-pooling`
 
 ## Open questions / blockers
 
-- M02-T03 is READY and must re-run Refresh/Capability Gate before any owned-carrier mutation.
-- M02-T03 requires GitHub mutation capability for the owned carrier plus an isolated Codex build environment. Under `chatgpt_only`, missing capability blocks rather than routing to Codex.
-- M02-T04/T05 require an isolated Community build/package test environment and authorized owned development branch/fork; capability must be proved before execution.
+- M02-T03 is BLOCKED before assignment by the `chatgpt_only` Capability Gate.
+- No existing `elmakus/codex` repository was found, and the current GitHub connector does not expose repository creation/fork capability to provision it.
+- The isolated runtime available to ChatGPT has no `rustc` or `cargo`, so it cannot satisfy the required reproducible Codex build, unit/build checks, or resulting binary version/SHA-256 evidence.
+- Resume M02-T03 only when the owned carrier exists with connector write access (or repository/fork creation becomes available) and an isolated Rust/Cargo build environment is available.
+- M02-T04/T05 remain planned and cannot start while M02-T03 is blocked.
 
 ## Workflow
 
