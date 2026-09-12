@@ -1,10 +1,10 @@
 project: Codex Fix Pooling — Tool Output Pruning
 branch: tool-output-pruning
 plan: planning/MASTER_PLAN.md
-current_milestone: TP_M01
+current_milestone: TP_M02
 execution_policy: chatgpt_only
 latest_handoff: project-handoffs/TP_M01_HANDOFF.md
-active_openspec: null
+active_openspec: openspec/changes/tp-m02-tool-output-pruning/
 
 milestones:
   TP_M01:
@@ -17,6 +17,22 @@ milestones:
     acceptance_evidence: implementation/evidence/TP_M01_ACCEPTANCE.md
     review_gate: passed_required_independent_review
     review_pointer: implementation/evidence/TP_M01_ACCEPTANCE.md
+
+  TP_M02:
+    title: Pruning feature implementation
+    execution_status: blocked
+    preparation_status: complete
+    required_prior_checkpoint: TP_M01_DISCOVERY_GREEN
+    refreshed_upstream_base: 53ff712a48379ce8df605e292afd6046ca88ae9b
+    community_baseline: 249cd4b64d42434f51417fec4a318750d461b676
+    official_linux_package: 26.908.40834
+    strategy: REIMPLEMENT_EQUIVALENT_BEHAVIOR
+    openspec: openspec/changes/tp-m02-tool-output-pruning/
+    execution_prep_evidence: implementation/evidence/TP_M02_EXECUTION_PREP.md
+    blocker: implementation/blockers/TP_M02_CAPABILITY_GATE.md
+    blocker_reason: Current normal ChatGPT session has no cargo/rustc/rustup/container runtime and no established equivalent Rust CI test lane; chatgpt_only prohibits starting unverifiable coding or routing to Codex.
+    target_checkpoint: TP_M02_PATCH_GREEN
+    independent_milestone_review: required
 
 cards:
   TP_M01-T01:
@@ -71,9 +87,85 @@ cards:
     evidence: implementation/evidence/TP_M01-T05_STRATEGY_AND_COMPATIBILITY.md
     independent_review: green
 
+  TP_M02-T00:
+    title: Establish verifiable exact-upstream Rust patch/test lane
+    execution_status: blocked
+    executor: null
+    depends_on: []
+    card: implementation/cards/TP_M02-T00_RUST_PATCH_TEST_LANE.md
+    blocker: implementation/blockers/TP_M02_CAPABILITY_GATE.md
+    result_commit: null
+    result_pr: null
+    evidence: null
+  TP_M02-T01:
+    title: Add opt-in feature and fail-closed pruning policy config
+    execution_status: planned
+    executor: null
+    depends_on:
+      - TP_M02-T00
+    card: implementation/cards/TP_M02-T01_FEATURE_CONFIG.md
+    result_commit: null
+    result_pr: null
+    evidence: null
+  TP_M02-T02:
+    title: Implement fail-closed output classification and identity pairing
+    execution_status: planned
+    executor: null
+    depends_on:
+      - TP_M02-T01
+    card: implementation/cards/TP_M02-T02_SAFETY_CLASSIFICATION.md
+    independent_review: recommended
+    result_commit: null
+    result_pr: null
+    evidence: null
+  TP_M02-T03:
+    title: Implement bounded request-payload pruning core
+    execution_status: planned
+    executor: null
+    depends_on:
+      - TP_M02-T02
+    card: implementation/cards/TP_M02-T03_PRUNING_CORE.md
+    independent_review: recommended
+    result_commit: null
+    result_pr: null
+    evidence: null
+  TP_M02-T04:
+    title: Integrate pruning across initial and retry request construction
+    execution_status: planned
+    executor: null
+    depends_on:
+      - TP_M02-T03
+    card: implementation/cards/TP_M02-T04_REQUEST_INTEGRATION.md
+    independent_review: recommended
+    result_commit: null
+    result_pr: null
+    evidence: null
+  TP_M02-T05:
+    title: Complete R19 semantic/regression suite
+    execution_status: planned
+    executor: null
+    depends_on:
+      - TP_M02-T04
+    card: implementation/cards/TP_M02-T05_R19_REGRESSION.md
+    result_commit: null
+    result_pr: null
+    evidence: null
+  TP_M02-T06:
+    title: Freeze patch provenance and integrated acceptance package
+    execution_status: planned
+    executor: null
+    depends_on:
+      - TP_M02-T05
+    card: implementation/cards/TP_M02-T06_PROVENANCE_ACCEPTANCE.md
+    independent_review: required_at_milestone_acceptance
+    result_commit: null
+    result_pr: null
+    evidence: null
+
 branch_state:
   implementation_branch: tool-output-pruning
   pull_request: null
   checkpoint_tag_created: false
-  checkpoint_tag_note: Active GitHub connector exposes no tag-creation action; TP_M01_DISCOVERY_GREEN is recorded as a durable logical checkpoint on this branch.
-  note: TP_M01 discovery is terminally done after required fresh independent review and integrated acceptance. TP_M02 has not started. No pruning implementation, fork mutation, Community source mutation, runtime substitution, local install or production deployment occurred.
+  checkpoint_tag_note: TP_M01_DISCOVERY_GREEN remains a durable logical checkpoint; no physical Git tag is claimed.
+  preparation_start_head: 91366ae4a0a2060f7e26662e19201159aa15a46b
+  note: TP_M02 execution preparation and JIT OpenSpec are durable. Refresh Gate is GREEN after bounded TUI-only upstream drift reconciliation. Coding is blocked by TP_M02-T00 capability gate. No pruning implementation, upstream/Community source mutation, custom runtime build/install/substitution, deployment or TP_M03 work has started.
