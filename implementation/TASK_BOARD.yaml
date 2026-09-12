@@ -2,8 +2,10 @@ project: Codex Fix Pooling — Tool Output Pruning
 branch: tool-output-pruning
 plan: planning/TP_M02_BEST_EFFORT_CODEX_HANDOFF_PLAN.md
 current_milestone: TP_M02
-latest_handoff: project-handoffs/TP_M01_HANDOFF.md
+latest_handoff: project-handoffs/TP_M02_CODEX_EXECUTION_HANDOFF.md
 active_openspec: openspec/changes/tp-m02-tool-output-pruning/
+next_executor: Codex
+next_action: execute_TP_M02_CODEX_EXECUTION_HANDOFF
 
 milestones:
   TP_M01:
@@ -18,20 +20,28 @@ milestones:
 
   TP_M02:
     title: Best-effort always-on pruning patch and Codex handoff
-    execution_status: active
+    execution_status: waiting_for_downstream_codex_validation_install_smoke
+    authoring_status: complete
     authoring_mode: static_best_effort
     validation_status: uncompiled_untested_in_authoring_environment
+    runtime_acceptance: pending
     required_prior_checkpoint: TP_M01_DISCOVERY_GREEN
     refreshed_upstream_base: c4017a87aacc7558002b7cb510025e967c1d765e
     community_baseline: 249cd4b64d42434f51417fec4a318750d461b676
     official_linux_package: 26.908.40834
+    equivalence_verdict: NOT_EQUIVALENT
     strategy: REIMPLEMENT_EQUIVALENT_BEHAVIOR_ALWAYS_ON
     enablement: always_on_no_disable_option
     openspec: openspec/changes/tp-m02-tool-output-pruning/
     active_plan: planning/TP_M02_BEST_EFFORT_CODEX_HANDOFF_PLAN.md
+    patch_series: implementation/patches/TP_M02_SERIES.md
+    refresh_evidence: implementation/evidence/TP_M02_REFRESH_BASELINE.md
+    static_review: implementation/evidence/TP_M02_STATIC_REVIEW.md
+    prepared_tests: implementation/evidence/TP_M02_PREPARED_TESTS.md
+    handoff: project-handoffs/TP_M02_CODEX_EXECUTION_HANDOFF.md
     historical_capability_record: implementation/blockers/TP_M02_CAPABILITY_GATE.md
     downstream_executor: Codex
-    downstream_goal: inspect_fix_if_needed_and_attempt_CE_update_plus_patched_runtime_install
+    downstream_goal: inspect_adapt_compile_test_update_CE_integrate_install_smoke_with_rollback
 
 cards:
   TP_M01-T01:
@@ -53,11 +63,11 @@ cards:
   TP_M02-T00:
     title: Historical Rust patch/test capability gate
     execution_status: superseded_as_authoring_blocker
-    note: Missing Rust/Cargo remains a validation limitation but no longer blocks static best-effort patch authoring.
+    note: Missing Rust/Cargo remains a validation limitation but no longer blocks static best-effort patch authoring. It still prevents any ChatGPT compile/test GREEN claim.
   TP_M02-T01:
     title: Historical opt-in feature/config card
     execution_status: superseded
-    note: User decision is always-on pruning with no disable option; no feature/config toggle is to be implemented.
+    note: Product decision is always-on pruning with no disable option; no feature/config toggle is implemented.
   TP_M02-T02:
     title: Historical safety-classification card
     execution_status: absorbed_into_BE_02_BE_03
@@ -72,41 +82,50 @@ cards:
     execution_status: superseded_by_downstream_validation_intent
   TP_M02-T06:
     title: Historical milestone acceptance package
-    execution_status: superseded_by_BE_04_BE_05
+    execution_status: superseded_by_BE_04_and_downstream_acceptance
 
   BE-01:
     title: Refresh and freeze exact source seams
-    execution_status: in_progress
+    execution_status: done
     executor: chatgpt
     depends_on: []
-    result_commit: null
-    evidence: null
+    result_commit: 19c08db8f7bff6f4d367dbad251b892e158fd33f
+    evidence: implementation/evidence/TP_M02_REFRESH_BASELINE.md
   BE-02:
     title: Author minimal always-on best-effort patch
-    execution_status: planned
+    execution_status: done
     executor: chatgpt
     depends_on: [BE-01]
-    result_commit: null
-    evidence: null
+    result_commit: 34345340ace964ad11c6b5130862860158183a8e
+    evidence: implementation/patches/TP_M02_SERIES.md
   BE-03:
     title: Static adversarial patch review and correction
-    execution_status: planned
+    execution_status: done
     executor: chatgpt
     depends_on: [BE-02]
-    result_commit: null
-    evidence: null
+    result_commit: 6dc7b2930c4518e8c2cf48637b4b2a5f75ef2e7d
+    evidence: implementation/evidence/TP_M02_STATIC_REVIEW.md
   BE-04:
     title: Produce Codex execution and Community integration/install handoff
-    execution_status: planned
+    execution_status: done
     executor: chatgpt
     depends_on: [BE-03]
+    result_commit: 24d8647186082986dae7a877eed77a0b40559356
+    evidence: project-handoffs/TP_M02_CODEX_EXECUTION_HANDOFF.md
+  BE-05:
+    title: Codex validate patch, update CE, integrate/install runtime, smoke, and persist evidence
+    execution_status: ready_for_downstream
+    executor: Codex
+    depends_on: [BE-04]
     result_commit: null
     evidence: null
-  BE-05:
-    title: Reconcile downstream compile/runtime/install results
-    execution_status: waiting_for_downstream
+    start_pointer: project-handoffs/TP_M02_CODEX_EXECUTION_HANDOFF.md
+    stop_on_unrepairable_failure: true
+  BE-06:
+    title: Reconcile downstream result and perform final independent acceptance
+    execution_status: waiting_for_BE_05
     executor: chatgpt
-    depends_on: [BE-04]
+    depends_on: [BE-05]
     result_commit: null
     evidence: null
 
@@ -115,4 +134,6 @@ branch_state:
   pull_request: null
   checkpoint_tag_created: false
   strategy_pivot_date: 2026-09-12
-  note: Static patch authoring is authorized despite missing Rust/Cargo. The resulting bundle must stay explicitly BEST_EFFORT / UNCOMPILED / UNTESTED until downstream evidence exists. Do not write to openai/codex, tekacs/codex, or ilysenko/codex-desktop-linux. Codex is expected to independently inspect/fix the handoff and attempt CE update plus patched runtime integration with rollback.
+  authoring_complete: true
+  authoring_label: BEST_EFFORT_STATICALLY_REVIEWED_NOT_COMPILED_BY_CHATGPT
+  note: Static patch authoring is complete despite missing Rust/Cargo. No public upstream/community repository was modified and no build/install/deployment occurred. Next work is downstream Codex execution from the durable handoff. Final runtime milestone remains pending until compile/test/update/install/smoke evidence and independent acceptance exist.
