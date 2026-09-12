@@ -13,7 +13,7 @@ milestones:
     milestone_file: implementation/milestones/M01_BASELINE_AND_COMPATIBILITY_DISCOVERY.md
   M02:
     title: Feature contract and build path
-    execution_status: in_progress
+    execution_status: blocked
     checkpoint: M02_FEATURE_GREEN
     implementation_head: null
     handoff: null
@@ -92,13 +92,13 @@ cards:
     openspec: openspec/changes/custom-codex-runtime-m02
   M02-T03:
     title: Establish controlled Codex carrier and reproducible runtime build provenance
-    execution_status: ready
+    execution_status: blocked
     executor: null
     depends_on: [M02-T02]
     card: implementation/cards/M02-T03.md
     result_commit: null
     result_pr: null
-    evidence: null
+    evidence: implementation/evidence/M02-T03_CAPABILITY_BLOCKER.md
     openspec: openspec/changes/custom-codex-runtime-m02
   M02-T04:
     title: Implement custom-codex-runtime feature and fail-closed package selection
