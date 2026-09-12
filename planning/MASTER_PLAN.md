@@ -28,13 +28,13 @@ These details are the historical behavioral baseline, not automatically frozen p
 
 ### Current upstream freshness note
 
-As of research on 2026-09-12, code search against current `openai/codex` did not find the historical `tool_output_prune` marker or exact replacement marker. Therefore the historical implementation has not simply landed unchanged.
+As of the pre-implementation audit on 2026-09-12, `openai/codex:main` is `944d6fd1ba4baab69dbedd205282dc72ec20abb5`; the previous research baseline `89c8bcf37d64be69e4c8286f4541c1a84ed312a4` is its direct parent. Code search did not find the historical `tool_output_prune` marker or exact replacement marker. The historical implementation has therefore not simply landed unchanged.
 
-M01 must still perform a strict equivalence audit against the exact current official bundled/runtime baseline because upstream may now implement equivalent context reduction through another mechanism.
+TP_M01 must still perform a strict equivalence audit against the exact current official bundled/runtime baseline because upstream may implement equivalent context reduction through another mechanism.
 
 ### ChatGPT Community delivery boundary
 
-The wakeup workstream already established that `ilysenko/codex-desktop-linux` uses the verified official OpenAI Linux package as its baseline, carries bundled `resources/codex`, supports opt-in Linux features and preserves selected feature configuration across native updater rebuilds.
+As of the same audit, `ilysenko/codex-desktop-linux:main` remains `249cd4b64d42434f51417fec4a318750d461b676`, tracking official Linux package `26.908.40834` in its latest repair commit. The sibling wakeup workstream established that Community uses the verified official OpenAI Linux package as its baseline, carries bundled `resources/codex`, supports opt-in Linux features and preserves selected feature configuration across native updater rebuilds.
 
 That architecture is reusable context, but this branch must independently verify any current facts it relies on before implementation.
 
@@ -112,13 +112,13 @@ Historical patch seams:
 - response item types for standard/custom tool outputs;
 - token-estimation utilities used by request-context accounting.
 
-Current exact seams must be rediscovered during M01 because upstream architecture may have moved.
+Current exact seams must be rediscovered during TP_M01 because upstream architecture may have moved.
 
 Likely Community integration seams remain the generic custom-runtime feature/build selection path, official `resources/codex`, update-builder/update-manager persistence and runtime compatibility gate.
 
 ## 8. Milestones
 
-### M01 — Current-baseline pruning discovery
+### TP_M01 — Current-baseline pruning discovery
 
 Outcome: establish whether custom pruning is still needed and define the exact current behavior/safety/effectiveness contract before implementation.
 
@@ -132,7 +132,7 @@ Work includes:
 - define non-destructive history invariant and observable request-time pruning semantics;
 - define measurable effectiveness criteria and representative benchmark fixtures;
 - define quality/regression matrix covering continuation, failures, patch evidence and interaction with current compaction/context-management;
-- determine whether direct rebase, adapted reimplementation or no custom patch is the correct M02 path;
+- determine whether direct rebase, adapted reimplementation or no custom patch is the correct TP_M02 path;
 - refresh the shared custom-runtime compatibility/delivery assumptions needed by this branch.
 
 Acceptance:
@@ -144,26 +144,18 @@ Acceptance:
 - threshold decision inputs are documented without prematurely freezing numbers;
 - canonical-history vs request-payload semantics are explicit;
 - effectiveness benchmark and quality/regression acceptance matrix are defined;
-- M02 implementation strategy has one evidence-backed path or an explicit blocker;
+- TP_M02 implementation strategy has one evidence-backed path or an explicit blocker;
 - no pruning implementation has been started.
 
 Checkpoint: `TP_M01_DISCOVERY_GREEN`.
 
-### M02 — Pruning feature implementation
+### TP_M02 — Pruning feature implementation
 
-Outcome: implement the minimal current-baseline pruning capability in a controlled Codex patch carrier when M01 proves custom divergence is still required.
+Outcome: implement the minimal current-baseline pruning capability in a controlled Codex patch carrier when TP_M01 proves custom divergence is still required.
 
-Work includes:
-
-- feature/config gating;
-- request-time pruning implementation against current response-item architecture;
-- protected-output classification;
-- threshold/config behavior selected from M01 evidence;
-- provenance/build identity;
-- unit/property/regression tests for pruning semantics.
+Work includes feature/config gating, request-time pruning implementation, protected-output classification, threshold/config behavior, provenance/build identity and unit/property/regression tests.
 
 Acceptance:
-
 - feature disabled leaves request construction unchanged;
 - feature enabled prunes only eligible old output according to the approved contract;
 - canonical history remains consistent with the approved invariant;
@@ -172,29 +164,23 @@ Acceptance:
 
 Checkpoint: `TP_M02_PATCH_GREEN`.
 
-### M03 — Effectiveness and quality validation
+### TP_M03 — Effectiveness and quality validation
 
 Outcome: prove the patch is worth carrying and does not create unacceptable reasoning/diagnostic regressions.
 
-Work includes paired disabled/enabled benchmark fixtures on identical histories, token/context measurement, long-session continuation checks, diagnostic failure retention, patch evidence retention and interaction with current compaction behavior.
-
 Acceptance:
-
-- pruning demonstrates the M01-defined material context reduction threshold;
+- pruning demonstrates the TP_M01-defined material context reduction threshold;
 - continuation/regression matrix passes;
-- any known quality trade-offs are bounded and documented;
+- known quality trade-offs are bounded and documented;
 - feature is rejected/retired if benefits do not justify divergence.
 
 Checkpoint: `TP_M03_EFFECTIVENESS_GREEN`.
 
-### M04 — Community Desktop integration
+### TP_M04 — Community Desktop integration
 
 Outcome: prove a pruning-capable custom Codex runtime works with ChatGPT Community through the generic runtime-delivery boundary without production mutation.
 
-Work includes current Desktop/app-server compatibility gate, controlled package artifact, startup/session initialization, ordinary tool workflow, pruning-enabled workflow and feature-disable fallback.
-
 Acceptance:
-
 - Desktop/runtime compatibility passes for the exact tested package;
 - pruning remains independently controllable;
 - stock-runtime fallback/disable path works;
@@ -202,14 +188,11 @@ Acceptance:
 
 Checkpoint: `TP_M04_DESKTOP_GREEN`.
 
-### M05 — Update refresh and retirement lifecycle
+### TP_M05 — Update refresh and retirement lifecycle
 
 Outcome: prove pruning does not become a stale permanent fork obligation.
 
-Work includes updater feature-state persistence, new baseline equivalence check, patch refresh/reimplementation gate, safety/effectiveness rerun and rollback/retirement behavior.
-
 Acceptance:
-
 - a controlled baseline refresh re-runs all required gates;
 - stale pruning runtime is never silently reused;
 - upstream equivalence can retire custom divergence cleanly;
@@ -217,14 +200,11 @@ Acceptance:
 
 Checkpoint: `TP_M05_UPDATE_GREEN`.
 
-### M06 — Consolidation with sibling runtime patches
+### TP_M06 — Consolidation with sibling runtime patches
 
 Outcome: decide whether pruning and background-exec wakeup should ship in one maintained custom runtime artifact while remaining independently traceable, testable and retireable.
 
-This milestone must not be interpreted as approval to merge behavior contracts. Consolidation is packaging/maintenance only.
-
 Acceptance:
-
 - shared vs independent runtime-artifact decision is recorded;
 - each capability has independent provenance and acceptance evidence;
 - enabling/disabling/retiring one capability does not silently change the other's contract;
@@ -234,22 +214,21 @@ Checkpoint: `TP_M06_CONSOLIDATION_GREEN`.
 
 ## 9. Requirement coverage
 
-- R1, R2 → M01 + M06
-- R3–R8 → M01 + M02
-- R9, R10, R20, R21 → M01 + M03
-- R11 → M01 + M05
-- R12–R15 → M01 + M04 + M05
-- R16–R18 → M04 + M05
-- R19 → M02
-- R22 → M04
-- R23 → M05
+- R1, R2 → TP_M01 + TP_M06
+- R3–R8 → TP_M01 + TP_M02
+- R9, R10, R20, R21 → TP_M01 + TP_M03
+- R11 → TP_M01 + TP_M05
+- R12–R15 → TP_M01 + TP_M04 + TP_M05
+- R16–R18 → TP_M04 + TP_M05
+- R19 → TP_M02
+- R22 → TP_M04
+- R23 → TP_M05
 
 Before execution of any milestone, its owned requirements must be decomposed into Task Cards according to the current Project Workflow.
 
 ## 10. Verification strategy
 
 Verification layers:
-
 1. exact baseline/source identity;
 2. upstream equivalence audit;
 3. request-time semantic/unit tests;
@@ -263,15 +242,15 @@ Verification layers:
 
 ## 11. Deployment strategy
 
-No production deployment is part of planning. Implementation and validation use controlled branches/artifacts. Any later production install requires explicit approval after M04/M05 evidence.
+No production deployment is part of planning. Implementation and validation use controlled branches/artifacts. Any later production install requires explicit approval after TP_M04/TP_M05 evidence.
 
 ## 12. OpenSpec policy
 
-M01 is discovery and does not require OpenSpec. Re-evaluate immediately before M02. If pruning configuration, threshold semantics, persisted feature settings or cross-package updater behavior form durable external contracts, create the minimal OpenSpec required by the current workflow.
+TP_M01 is discovery and does not require OpenSpec. Re-evaluate immediately before TP_M02. If pruning configuration, threshold semantics, persisted feature settings or cross-package updater behavior form durable external contracts, create the minimal OpenSpec required by the current workflow.
 
 ## 13. Task decomposition policy
 
-Do not reuse the wakeup workstream's inherited M01 Task Cards. After a GREEN pre-implementation audit, prepare fresh pruning-specific M01 cards only.
+Do not reuse the wakeup workstream's inherited M01 Task Cards. After a GREEN pre-implementation audit, prepare fresh pruning-specific TP_M01 cards only.
 
 Later milestones remain outcome-specific until their Refresh Gate confirms the current source/runtime seams.
 
