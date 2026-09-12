@@ -1,0 +1,727 @@
+diff --git a/codex-rs/core/src/lib.rs b/codex-rs/core/src/lib.rs
+--- a/codex-rs/core/src/lib.rs
++++ b/codex-rs/core/src/lib.rs
+@@ -153,6 +153,7 @@ pub use state_db_bridge::StateDbHandle;
+ pub use state_db_bridge::init_state_db;
+ mod thread_rollout_truncation;
++mod tool_output_prune;
+ pub use thread_rollout_truncation::truncate_rollout_after_turn_id;
+ pub use thread_rollout_truncation::truncate_rollout_before_turn_id;
+ mod tools;
+diff --git a/codex-rs/core/src/session/turn.rs b/codex-rs/core/src/session/turn.rs
+--- a/codex-rs/core/src/session/turn.rs
++++ b/codex-rs/core/src/session/turn.rs
+@@ -1570,7 +1570,7 @@ async fn run_sampling_request(
+                 .await
+                 .for_prompt(&step_context.settings.model_info.input_modalities)
+         };
+-        let mut prompt_input = prompt_input;
++        let mut prompt_input = crate::tool_output_prune::prune(prompt_input);
+         sess.services
+             .executed_tool_calls
+             .attach_to_prompt(&mut prompt_input, &mut executed_tool_calls_by_output);
+diff --git a/codex-rs/core/src/tool_output_prune.rs b/codex-rs/core/src/tool_output_prune.rs
+new file mode 100644
+--- /dev/null
++++ b/codex-rs/core/src/tool_output_prune.rs
+@@ -0,0 +1,690 @@
++use std::collections::HashMap;
++use std::collections::hash_map::Entry;
++
++use codex_protocol::DEFAULT_FUNCTION_NAMESPACE;
++use codex_protocol::models::FunctionCallOutputBody;
++use codex_protocol::models::ResponseItem;
++
++use crate::context_manager::estimate_item_token_count;
++
++const PRUNE_PROTECT_TOKENS: usize = 40_000;
++const PRUNE_MINIMUM_NET_TOKENS: usize = 20_000;
++const PRUNE_RECENT_USER_BOUNDARIES: usize = 2;
++const PRUNE_PLACEHOLDER: &str = "[Old tool result content cleared]";
++
++#[derive(Clone, Debug)]
++struct CallDescriptor {
++    name: String,
++    namespace: Option<String>,
++    input: String,
++}
++
++pub(crate) fn prune(items: Vec<ResponseItem>) -> Vec<ResponseItem> {
++    let calls = collect_calls(&items);
++    let mut crossed_user_boundaries = 0usize;
++    let mut protected_candidate_tokens = 0usize;
++    let mut replacements = Vec::<(usize, ResponseItem, usize)>::new();
++    let mut net_savings = 0usize;
++
++    for (idx, item) in items.iter().enumerate().rev() {
++        if is_user_input_boundary(item) {
++            crossed_user_boundaries = crossed_user_boundaries.saturating_add(1);
++            continue;
++        }
++        if crossed_user_boundaries < PRUNE_RECENT_USER_BOUNDARIES {
++            continue;
++        }
++
++        let Some(replacement) = replacement_for_candidate(item, &calls) else {
++            continue;
++        };
++        let Some(original_tokens) = estimated_tokens(item) else {
++            continue;
++        };
++
++        // Protect whole outputs until the newest otherwise-eligible budget is satisfied.
++        // This intentionally may retain more than the nominal budget when one output crosses it.
++        if protected_candidate_tokens < PRUNE_PROTECT_TOKENS {
++            protected_candidate_tokens =
++                protected_candidate_tokens.saturating_add(original_tokens);
++            continue;
++        }
++
++        let Some(replacement_tokens) = estimated_tokens(&replacement) else {
++            continue;
++        };
++        let Some(saved_tokens) = original_tokens.checked_sub(replacement_tokens) else {
++            continue;
++        };
++        if saved_tokens == 0 {
++            continue;
++        }
++
++        net_savings = net_savings.saturating_add(saved_tokens);
++        replacements.push((idx, replacement, saved_tokens));
++    }
++
++    if net_savings <= PRUNE_MINIMUM_NET_TOKENS {
++        return items;
++    }
++
++    let mut pruned = items;
++    for (idx, replacement, _) in replacements {
++        pruned[idx] = replacement;
++    }
++    pruned
++}
++
++fn estimated_tokens(item: &ResponseItem) -> Option<usize> {
++    usize::try_from(estimate_item_token_count(item))
++        .ok()
++        .filter(|tokens| *tokens > 0)
++}
++
++fn collect_calls(items: &[ResponseItem]) -> HashMap<String, Option<CallDescriptor>> {
++    let mut calls = HashMap::new();
++    for item in items {
++        let descriptor = match item {
++            ResponseItem::FunctionCall {
++                call_id,
++                name,
++                namespace,
++                arguments,
++                ..
++            } => Some((
++                call_id,
++                CallDescriptor {
++                    name: name.clone(),
++                    namespace: namespace.clone(),
++                    input: arguments.clone(),
++                },
++            )),
++            ResponseItem::CustomToolCall {
++                call_id,
++                name,
++                namespace,
++                input,
++                ..
++            } => Some((
++                call_id,
++                CallDescriptor {
++                    name: name.clone(),
++                    namespace: namespace.clone(),
++                    input: input.clone(),
++                },
++            )),
++            _ => None,
++        };
++        let Some((call_id, descriptor)) = descriptor else {
++            continue;
++        };
++        match calls.entry(call_id.clone()) {
++            Entry::Vacant(entry) => {
++                entry.insert(Some(descriptor));
++            }
++            Entry::Occupied(mut entry) => {
++                // Any duplicate call ID makes the relationship ambiguous, even if both
++                // observed calls happen to carry the same name today.
++                entry.insert(None);
++            }
++        }
++    }
++    calls
++}
++
++fn replacement_for_candidate(
++    item: &ResponseItem,
++    calls: &HashMap<String, Option<CallDescriptor>>,
++) -> Option<ResponseItem> {
++    let (call_id, output_name, output_namespace, output) = match item {
++        ResponseItem::FunctionCallOutput {
++            call_id: Some(call_id),
++            name,
++            namespace,
++            output,
++            ..
++        } => (
++            call_id.as_str(),
++            name.as_deref(),
++            namespace.as_deref(),
++            output,
++        ),
++        ResponseItem::CustomToolCallOutput {
++            call_id,
++            name,
++            output,
++            ..
++        } => (call_id.as_str(), name.as_deref(), None, output),
++        _ => return None,
++    };
++
++    if output.success != Some(true) || !matches!(output.body, FunctionCallOutputBody::Text(_)) {
++        return None;
++    }
++
++    let call = calls.get(call_id)?.as_ref()?;
++    if output_name.is_some_and(|name| name != call.name.as_str()) {
++        return None;
++    }
++    if output_namespace.is_some_and(|namespace| call.namespace.as_deref() != Some(namespace)) {
++        return None;
++    }
++    if !is_replayable_call(call) {
++        return None;
++    }
++
++    let mut replacement = item.clone();
++    match &mut replacement {
++        ResponseItem::FunctionCallOutput { output, .. }
++        | ResponseItem::CustomToolCallOutput { output, .. } => {
++            output.body = FunctionCallOutputBody::Text(PRUNE_PLACEHOLDER.to_string());
++        }
++        _ => return None,
++    }
++    Some(replacement)
++}
++
++fn is_replayable_call(call: &CallDescriptor) -> bool {
++    if !call
++        .namespace
++        .as_deref()
++        .is_none_or(|namespace| namespace == DEFAULT_FUNCTION_NAMESPACE)
++    {
++        return false;
++    }
++
++    match call.name.as_str() {
++        // The initial allowlist is intentionally tiny. exec_command becomes eligible only
++        // when its argument is provably one simple read-only command from the list below.
++        "exec_command" => extract_exec_command(&call.input).is_some_and(is_simple_read_only_command),
++        _ => false,
++    }
++}
++
++fn extract_exec_command(input: &str) -> Option<&str> {
++    let value: serde_json::Value = serde_json::from_str(input).ok()?;
++    value.get("cmd")?.as_str()
++}
++
++fn is_simple_read_only_command(command: &str) -> bool {
++    let command = command.trim();
++    if command.is_empty()
++        || command
++            .chars()
++            .any(|ch| matches!(ch, '\n' | '\r' | ';' | '|' | '&' | '>' | '<' | '`'))
++        || command.contains("$(")
++        || command.contains("${")
++    {
++        return false;
++    }
++
++    let mut words = command.split_whitespace();
++    let Some(executable) = words.next() else {
++        return false;
++    };
++    let executable = executable.rsplit('/').next().unwrap_or(executable);
++
++    match executable {
++        "cat" | "head" | "wc" | "ls" | "pwd" | "stat" | "grep" => true,
++        "tail" => !words.any(|arg| {
++            arg == "-f"
++                || arg.starts_with("-f")
++                || arg == "--follow"
++                || arg.starts_with("--follow=")
++                || arg == "--pid"
++                || arg.starts_with("--pid=")
++        }),
++        "rg" => !words.any(|arg| arg == "--pre" || arg.starts_with("--pre=")),
++        _ => false,
++    }
++}
++
++fn is_user_input_boundary(item: &ResponseItem) -> bool {
++    let ResponseItem::Message {
++        role,
++        internal_chat_message_metadata_passthrough,
++        ..
++    } = item
++    else {
++        return false;
++    };
++    if role != "user" {
++        return false;
++    }
++
++    internal_chat_message_metadata_passthrough
++        .as_ref()
++        .and_then(|metadata| metadata.content_item_kinds.as_ref())
++        .is_none_or(|kinds| kinds.iter().any(|kind| kind.0.starts_with("user.")))
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use codex_protocol::models::ContentItem;
++    use codex_protocol::models::FunctionCallOutputContentItem;
++    use codex_protocol::models::FunctionCallOutputPayload;
++    use codex_protocol::models::InternalChatMessageMetadataPassthrough;
++    use pretty_assertions::assert_eq;
++
++    fn text_for_tokens(tokens: usize, ch: char) -> String {
++        std::iter::repeat(ch)
++            .take(tokens.saturating_mul(4))
++            .collect()
++    }
++
++    fn user_message(text: &str) -> ResponseItem {
++        ResponseItem::Message {
++            id: None,
++            role: "user".to_string(),
++            content: vec![ContentItem::InputText {
++                text: text.to_string(),
++            }],
++            phase: None,
++            internal_chat_message_metadata_passthrough: None,
++        }
++    }
++
++    fn function_call(call_id: &str, name: &str, cmd: &str) -> ResponseItem {
++        ResponseItem::FunctionCall {
++            id: None,
++            name: name.to_string(),
++            namespace: None,
++            arguments: serde_json::json!({ "cmd": cmd }).to_string(),
++            encrypted_function_args: None,
++            call_id: call_id.to_string(),
++            internal_chat_message_metadata_passthrough: None,
++        }
++    }
++
++    fn custom_call(call_id: &str, name: &str, cmd: &str) -> ResponseItem {
++        ResponseItem::CustomToolCall {
++            id: None,
++            status: Some("completed".to_string()),
++            call_id: call_id.to_string(),
++            name: name.to_string(),
++            namespace: None,
++            input: serde_json::json!({ "cmd": cmd }).to_string(),
++            internal_chat_message_metadata_passthrough: None,
++        }
++    }
++
++    fn function_output_with_success(
++        call_id: &str,
++        name: Option<&str>,
++        text: String,
++        success: Option<bool>,
++    ) -> ResponseItem {
++        ResponseItem::FunctionCallOutput {
++            id: None,
++            call_id: Some(call_id.to_string()),
++            name: name.map(str::to_string),
++            namespace: None,
++            output: FunctionCallOutputPayload {
++                body: FunctionCallOutputBody::Text(text),
++                success,
++            },
++            internal_chat_message_metadata_passthrough: None,
++        }
++    }
++
++    fn function_output(call_id: &str, text: String) -> ResponseItem {
++        function_output_with_success(call_id, None, text, Some(true))
++    }
++
++    fn custom_output_with_success(
++        call_id: &str,
++        name: Option<&str>,
++        text: String,
++        success: Option<bool>,
++    ) -> ResponseItem {
++        ResponseItem::CustomToolCallOutput {
++            id: None,
++            call_id: call_id.to_string(),
++            name: name.map(str::to_string),
++            output: FunctionCallOutputPayload {
++                body: FunctionCallOutputBody::Text(text),
++                success,
++            },
++            internal_chat_message_metadata_passthrough: None,
++        }
++    }
++
++    fn custom_output(call_id: &str, text: String) -> ResponseItem {
++        custom_output_with_success(call_id, None, text, Some(true))
++    }
++
++    fn two_boundaries() -> Vec<ResponseItem> {
++        vec![user_message("u1"), user_message("u2")]
++    }
++
++    fn protected_budget_pair() -> Vec<ResponseItem> {
++        vec![
++            function_call("protect", "exec_command", "cat protected.txt"),
++            function_output("protect", text_for_tokens(45_000, 'p')),
++        ]
++    }
++
++    fn body_text(item: &ResponseItem) -> Option<&str> {
++        match item {
++            ResponseItem::FunctionCallOutput { output, .. }
++            | ResponseItem::CustomToolCallOutput { output, .. } => match &output.body {
++                FunctionCallOutputBody::Text(text) => Some(text.as_str()),
++                FunctionCallOutputBody::ContentItems(_) => None,
++            },
++            _ => None,
++        }
++    }
++
++    #[test]
++    fn recent_output_is_retained() {
++        let items = vec![
++            user_message("u1"),
++            function_call("recent", "exec_command", "cat recent.txt"),
++            function_output("recent", text_for_tokens(80_000, 'r')),
++            user_message("u2"),
++        ];
++        assert_eq!(prune(items.clone()), items);
++    }
++
++    #[test]
++    fn newest_old_output_budget_is_retained_whole() {
++        let mut items = protected_budget_pair();
++        items.extend(two_boundaries());
++        assert_eq!(prune(items.clone()), items);
++    }
++
++    #[test]
++    fn old_eligible_standard_output_is_pruned() {
++        let mut items = vec![
++            function_call("old", "exec_command", "cat old.txt"),
++            function_output("old", text_for_tokens(30_000, 'o')),
++        ];
++        items.extend(protected_budget_pair());
++        items.extend(two_boundaries());
++
++        let pruned = prune(items);
++        assert_eq!(body_text(&pruned[1]), Some(PRUNE_PLACEHOLDER));
++    }
++
++    #[test]
++    fn equivalent_old_eligible_custom_output_is_pruned() {
++        let mut items = vec![
++            custom_call("old", "exec_command", "cat old.txt"),
++            custom_output("old", text_for_tokens(30_000, 'o')),
++        ];
++        items.extend(protected_budget_pair());
++        items.extend(two_boundaries());
++
++        let pruned = prune(items);
++        assert_eq!(body_text(&pruned[1]), Some(PRUNE_PLACEHOLDER));
++    }
++
++    #[test]
++    fn below_minimum_net_benefit_is_unchanged() {
++        let mut items = vec![
++            function_call("old", "exec_command", "cat old.txt"),
++            function_output("old", text_for_tokens(10_000, 'o')),
++        ];
++        items.extend(protected_budget_pair());
++        items.extend(two_boundaries());
++
++        assert_eq!(prune(items.clone()), items);
++    }
++
++    #[test]
++    fn failed_standard_output_is_retained() {
++        let failed = text_for_tokens(35_000, 'f');
++        let mut items = vec![
++            function_call("failed", "exec_command", "cat failed.txt"),
++            function_output_with_success("failed", None, failed.clone(), Some(false)),
++            function_call("old", "exec_command", "cat old.txt"),
++            function_output("old", text_for_tokens(30_000, 'o')),
++        ];
++        items.extend(protected_budget_pair());
++        items.extend(two_boundaries());
++
++        let pruned = prune(items);
++        assert_eq!(body_text(&pruned[1]), Some(failed.as_str()));
++        assert_eq!(body_text(&pruned[3]), Some(PRUNE_PLACEHOLDER));
++    }
++
++    #[test]
++    fn failed_custom_output_is_retained() {
++        let failed = text_for_tokens(35_000, 'f');
++        let mut items = vec![
++            custom_call("failed", "exec_command", "cat failed.txt"),
++            custom_output_with_success("failed", None, failed.clone(), Some(false)),
++            function_call("old", "exec_command", "cat old.txt"),
++            function_output("old", text_for_tokens(30_000, 'o')),
++        ];
++        items.extend(protected_budget_pair());
++        items.extend(two_boundaries());
++
++        let pruned = prune(items);
++        assert_eq!(body_text(&pruned[1]), Some(failed.as_str()));
++        assert_eq!(body_text(&pruned[3]), Some(PRUNE_PLACEHOLDER));
++    }
++
++    #[test]
++    fn unknown_success_is_retained_for_standard_and_custom_outputs() {
++        let standard = text_for_tokens(35_000, 's');
++        let custom = text_for_tokens(35_000, 'c');
++        let mut items = vec![
++            function_call("standard", "exec_command", "cat standard.txt"),
++            function_output_with_success("standard", None, standard.clone(), None),
++            custom_call("custom", "exec_command", "cat custom.txt"),
++            custom_output_with_success("custom", None, custom.clone(), None),
++            function_call("old", "exec_command", "cat old.txt"),
++            function_output("old", text_for_tokens(30_000, 'o')),
++        ];
++        items.extend(protected_budget_pair());
++        items.extend(two_boundaries());
++
++        let pruned = prune(items);
++        assert_eq!(body_text(&pruned[1]), Some(standard.as_str()));
++        assert_eq!(body_text(&pruned[3]), Some(custom.as_str()));
++        assert_eq!(body_text(&pruned[5]), Some(PRUNE_PLACEHOLDER));
++    }
++
++    #[test]
++    fn apply_patch_is_retained_in_custom_tool_form() {
++        let patch = text_for_tokens(35_000, 'a');
++        let mut items = vec![
++            custom_call("patch", "apply_patch", "*** Begin Patch"),
++            custom_output("patch", patch.clone()),
++            function_call("old", "exec_command", "cat old.txt"),
++            function_output("old", text_for_tokens(30_000, 'o')),
++        ];
++        items.extend(protected_budget_pair());
++        items.extend(two_boundaries());
++
++        let pruned = prune(items);
++        assert_eq!(body_text(&pruned[1]), Some(patch.as_str()));
++        assert_eq!(body_text(&pruned[3]), Some(PRUNE_PLACEHOLDER));
++    }
++
++    #[test]
++    fn unknown_tool_is_retained() {
++        let unknown = text_for_tokens(35_000, 'u');
++        let mut items = vec![
++            function_call("unknown", "future_tool", "{}"),
++            function_output("unknown", unknown.clone()),
++            function_call("old", "exec_command", "cat old.txt"),
++            function_output("old", text_for_tokens(30_000, 'o')),
++        ];
++        items.extend(protected_budget_pair());
++        items.extend(two_boundaries());
++
++        let pruned = prune(items);
++        assert_eq!(body_text(&pruned[1]), Some(unknown.as_str()));
++    }
++
++    #[test]
++    fn ambiguous_pairing_is_retained() {
++        let ambiguous = text_for_tokens(35_000, 'a');
++        let mut items = vec![
++            function_call("dup", "exec_command", "cat a.txt"),
++            custom_call("dup", "apply_patch", "*** Begin Patch"),
++            function_output("dup", ambiguous.clone()),
++            function_call("old", "exec_command", "cat old.txt"),
++            function_output("old", text_for_tokens(30_000, 'o')),
++        ];
++        items.extend(protected_budget_pair());
++        items.extend(two_boundaries());
++
++        let pruned = prune(items);
++        assert_eq!(body_text(&pruned[2]), Some(ambiguous.as_str()));
++    }
++
++    #[test]
++    fn structured_output_is_retained() {
++        let structured = ResponseItem::FunctionCallOutput {
++            id: None,
++            call_id: Some("structured".to_string()),
++            name: None,
++            namespace: None,
++            output: FunctionCallOutputPayload {
++                body: FunctionCallOutputBody::ContentItems(vec![
++                    FunctionCallOutputContentItem::InputText {
++                        text: text_for_tokens(35_000, 's'),
++                    },
++                ]),
++                success: Some(true),
++            },
++            internal_chat_message_metadata_passthrough: None,
++        };
++        let mut items = vec![
++            function_call("structured", "exec_command", "cat structured.txt"),
++            structured.clone(),
++            function_call("old", "exec_command", "cat old.txt"),
++            function_output("old", text_for_tokens(30_000, 'o')),
++        ];
++        items.extend(protected_budget_pair());
++        items.extend(two_boundaries());
++
++        let pruned = prune(items);
++        assert_eq!(pruned[1], structured);
++    }
++
++    #[test]
++    fn tool_search_output_is_retained() {
++        let tool_search = ResponseItem::ToolSearchOutput {
++            id: None,
++            call_id: Some("search".to_string()),
++            status: "completed".to_string(),
++            execution: "tool-search".to_string(),
++            tools: vec![serde_json::json!({"name": "sentinel"})],
++            internal_chat_message_metadata_passthrough: None,
++        };
++        let mut items = vec![
++            tool_search.clone(),
++            function_call("old", "exec_command", "cat old.txt"),
++            function_output("old", text_for_tokens(30_000, 'o')),
++        ];
++        items.extend(protected_budget_pair());
++        items.extend(two_boundaries());
++
++        let pruned = prune(items);
++        assert_eq!(pruned[0], tool_search);
++    }
++
++    #[test]
++    fn replacement_preserves_output_metadata() {
++        let metadata = InternalChatMessageMetadataPassthrough {
++            turn_id: Some("turn-old".to_string()),
++            ..Default::default()
++        };
++        let old = ResponseItem::FunctionCallOutput {
++            id: None,
++            call_id: Some("old".to_string()),
++            name: Some("exec_command".to_string()),
++            namespace: None,
++            output: FunctionCallOutputPayload {
++                body: FunctionCallOutputBody::Text(text_for_tokens(30_000, 'o')),
++                success: Some(true),
++            },
++            internal_chat_message_metadata_passthrough: Some(metadata.clone()),
++        };
++        let mut items = vec![
++            function_call("old", "exec_command", "cat old.txt"),
++            old,
++        ];
++        items.extend(protected_budget_pair());
++        items.extend(two_boundaries());
++
++        let pruned = prune(items);
++        let ResponseItem::FunctionCallOutput {
++            call_id,
++            name,
++            namespace,
++            output,
++            internal_chat_message_metadata_passthrough,
++            ..
++        } = &pruned[1]
++        else {
++            panic!("expected function call output");
++        };
++        assert_eq!(call_id.as_deref(), Some("old"));
++        assert_eq!(name.as_deref(), Some("exec_command"));
++        assert_eq!(namespace, &None);
++        assert_eq!(output.success, Some(true));
++        assert_eq!(
++            output.body,
++            FunctionCallOutputBody::Text(PRUNE_PLACEHOLDER.to_string())
++        );
++        assert_eq!(internal_chat_message_metadata_passthrough, &Some(metadata));
++    }
++
++    #[test]
++    fn canonical_input_clone_is_not_mutated() {
++        let mut canonical = vec![
++            function_call("old", "exec_command", "cat old.txt"),
++            function_output("old", text_for_tokens(30_000, 'o')),
++        ];
++        canonical.extend(protected_budget_pair());
++        canonical.extend(two_boundaries());
++        let before = canonical.clone();
++
++        let request = prune(canonical.clone());
++
++        assert_eq!(canonical, before);
++        assert_ne!(request, before);
++    }
++
++    #[test]
++    fn regenerated_retry_input_receives_the_same_transform_when_reapplied() {
++        let mut canonical = vec![
++            function_call("old", "exec_command", "cat old.txt"),
++            function_output("old", text_for_tokens(30_000, 'o')),
++        ];
++        canonical.extend(protected_budget_pair());
++        canonical.extend(two_boundaries());
++
++        let initial_request = prune(canonical.clone());
++        let regenerated_retry_request = prune(canonical.clone());
++
++        assert_eq!(initial_request, regenerated_retry_request);
++        assert_eq!(
++            body_text(&regenerated_retry_request[1]),
++            Some(PRUNE_PLACEHOLDER)
++        );
++    }
++
++    #[test]
++    fn mutating_or_shell_composed_exec_command_is_not_allowlisted() {
++        let mutation = text_for_tokens(35_000, 'm');
++        let mut items = vec![
++            function_call("mutation", "exec_command", "cat input.txt > output.txt"),
++            function_output("mutation", mutation.clone()),
++            function_call("old", "exec_command", "cat old.txt"),
++            function_output("old", text_for_tokens(30_000, 'o')),
++        ];
++        items.extend(protected_budget_pair());
++        items.extend(two_boundaries());
++
++        let pruned = prune(items);
++        assert_eq!(body_text(&pruned[1]), Some(mutation.as_str()));
++    }
++
++    #[test]
++    fn no_eligible_output_is_unchanged() {
++        let items = vec![
++            function_call("patch", "apply_patch", "*** Begin Patch"),
++            function_output("patch", text_for_tokens(80_000, 'p')),
++            user_message("u1"),
++            user_message("u2"),
++        ];
++        assert_eq!(prune(items.clone()), items);
++    }
++}
