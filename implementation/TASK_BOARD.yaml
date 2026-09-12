@@ -1,6 +1,6 @@
 project: elmakus/Codex-fix-pooling
 plan: planning/MASTER_PLAN.md
-current_milestone: M01
+current_milestone: M02
 execution_policy: chatgpt_only
 milestones:
   M01:
@@ -11,6 +11,14 @@ milestones:
     handoff: project-handoffs/M01_HANDOFF.md
     acceptance_evidence: implementation/evidence/M01_ACCEPTANCE.md
     milestone_file: implementation/milestones/M01_BASELINE_AND_COMPATIBILITY_DISCOVERY.md
+  M02:
+    title: Feature contract and build path
+    execution_status: ready
+    checkpoint: M02_FEATURE_GREEN
+    implementation_head: null
+    handoff: null
+    acceptance_evidence: null
+    milestone_file: implementation/milestones/M02_FEATURE_CONTRACT_AND_BUILD_PATH.md
 cards:
   M01-T01:
     title: Trace official package and bundled Codex baseline
@@ -62,3 +70,53 @@ cards:
     result_pr: null
     evidence: implementation/evidence/M01-T05_COMPATIBILITY_GATE.md
     openspec: null
+  M02-T01:
+    title: Verify Desktop runtime-selection coverage and freeze substitution seam
+    execution_status: ready
+    executor: null
+    depends_on: []
+    card: implementation/cards/M02-T01.md
+    result_commit: null
+    result_pr: null
+    evidence: null
+    openspec: null
+  M02-T02:
+    title: Freeze feature/settings/provenance contract in OpenSpec
+    execution_status: planned
+    executor: null
+    depends_on: [M02-T01]
+    card: implementation/cards/M02-T02.md
+    result_commit: null
+    result_pr: null
+    evidence: null
+    openspec: candidate-required
+  M02-T03:
+    title: Establish controlled Codex carrier and reproducible runtime build provenance
+    execution_status: planned
+    executor: null
+    depends_on: [M02-T02]
+    card: implementation/cards/M02-T03.md
+    result_commit: null
+    result_pr: null
+    evidence: null
+    openspec: pending-M02-T02
+  M02-T04:
+    title: Implement custom-codex-runtime feature and fail-closed package selection
+    execution_status: planned
+    executor: null
+    depends_on: [M02-T02, M02-T03]
+    card: implementation/cards/M02-T04.md
+    result_commit: null
+    result_pr: null
+    evidence: null
+    openspec: pending-M02-T02
+  M02-T05:
+    title: Verify M02 package-level acceptance and rollback readiness
+    execution_status: planned
+    executor: null
+    depends_on: [M02-T04]
+    card: implementation/cards/M02-T05.md
+    result_commit: null
+    result_pr: null
+    evidence: null
+    openspec: pending-M02-T02
