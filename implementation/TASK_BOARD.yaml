@@ -1,0 +1,64 @@
+project: elmakus/Codex-fix-pooling
+plan: planning/MASTER_PLAN.md
+current_milestone: M01
+execution_policy: chatgpt_only
+milestones:
+  M01:
+    title: Baseline and compatibility discovery
+    execution_status: ready
+    checkpoint: M01_BASELINE_GREEN
+    implementation_head: null
+    handoff: null
+    acceptance_evidence: null
+    milestone_file: implementation/milestones/M01_BASELINE_AND_COMPATIBILITY_DISCOVERY.md
+cards:
+  M01-T01:
+    title: Trace official package and bundled Codex baseline
+    execution_status: ready
+    executor: null
+    depends_on: []
+    card: implementation/cards/M01-T01.md
+    result_commit: null
+    result_pr: null
+    evidence: null
+    openspec: null
+  M01-T02:
+    title: Map bundled runtime to Codex source and protocol baseline
+    execution_status: planned
+    executor: null
+    depends_on: [M01-T01]
+    card: implementation/cards/M01-T02.md
+    result_commit: null
+    result_pr: null
+    evidence: null
+    openspec: null
+  M01-T03:
+    title: Audit runtime override, feature, and update persistence seams
+    execution_status: planned
+    executor: null
+    depends_on: [M01-T01]
+    card: implementation/cards/M01-T03.md
+    result_commit: null
+    result_pr: null
+    evidence: null
+    openspec: null
+  M01-T04:
+    title: Determine upstream equivalence and patch-carrier refresh strategy
+    execution_status: planned
+    executor: null
+    depends_on: [M01-T02]
+    card: implementation/cards/M01-T04.md
+    result_commit: null
+    result_pr: null
+    evidence: null
+    openspec: null
+  M01-T05:
+    title: Freeze compatibility gate and minimum M02 test matrix
+    execution_status: planned
+    executor: null
+    depends_on: [M01-T02, M01-T03, M01-T04]
+    card: implementation/cards/M01-T05.md
+    result_commit: null
+    result_pr: null
+    evidence: null
+    openspec: null
