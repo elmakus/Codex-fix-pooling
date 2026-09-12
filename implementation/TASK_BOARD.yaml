@@ -13,7 +13,7 @@ milestones:
     milestone_file: implementation/milestones/M01_BASELINE_AND_COMPATIBILITY_DISCOVERY.md
   M02:
     title: Feature contract and build path
-    execution_status: ready
+    execution_status: in_progress
     checkpoint: M02_FEATURE_GREEN
     implementation_head: null
     handoff: null
@@ -72,8 +72,8 @@ cards:
     openspec: null
   M02-T01:
     title: Verify Desktop runtime-selection coverage and freeze substitution seam
-    execution_status: ready
-    executor: null
+    execution_status: in_progress
+    executor: chatgpt
     depends_on: []
     card: implementation/cards/M02-T01.md
     result_commit: null
