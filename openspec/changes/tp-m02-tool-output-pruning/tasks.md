@@ -1,18 +1,30 @@
 # TP_M02 Tool Output Pruning — OpenSpec Tasks
 
-These are implementation subtasks inside the OpenSpec change. Global execution ownership remains in `implementation/cards/TP_M02-*`.
+Active strategy: `BEST_EFFORT / STATICALLY_REVIEWED / UNCOMPILED / UNTESTED` authoring, followed by downstream Codex validation/integration.
 
-- [ ] Add off-by-default feature/config plumbing using current feature/config patterns.
-- [ ] Validate explicit pruning policy: replayable-tool identities, positive recent-token budget, positive minimum-savings gate, user-turn floor >= 2.
-- [ ] Add focused request-time pruning core with deterministic `PruneResult` observability.
-- [ ] Implement trusted standard/custom call-output identity recovery and fail-closed ambiguity handling.
-- [ ] Protect failed/unknown-success outputs, `apply_patch`/mutation evidence, unknown/new classes, structured/media output and `ToolSearchOutput`.
-- [ ] Implement recent user-turn floor and newest-output protection budget using current item token estimation.
-- [ ] Implement replacement-aware minimum-benefit gate and stable replacement marker while preserving item metadata.
-- [ ] Integrate the same pruning call into each `run_sampling_request` attempt after initial/regenerated prompt input selection and before prompt construction.
-- [ ] Prove canonical history is unchanged by both initial and retry request preparation.
-- [ ] Add complete R19 semantic/regression coverage listed in `specs/tool-output-pruning.md`.
-- [ ] Record exact upstream base, patch/change provenance, policy settings and exact test evidence.
-- [ ] Run fresh independent integrated TP_M02 acceptance review before declaring `TP_M02_PATCH_GREEN`.
+Historical local-Rust-lane blocker and off-by-default feature/config work are superseded. They remain preserved in historical evidence/task state and are not silently erased.
 
-Execution is currently blocked before the first coding subtask by `implementation/blockers/TP_M02_CAPABILITY_GATE.md`; no checkbox above is started in this preparation session.
+- [x] Run Fresh Refresh Gate and freeze exact `openai/codex`, Community and package baselines.
+- [x] Reconfirm request integration seam on exact fresh upstream source.
+- [x] Freeze current output/success/tool-identity/apply-patch/token-estimator representations.
+- [x] Select always-on activation; add no feature flag/config/off switch.
+- [x] Freeze conservative compile-time policy and positive eligibility classification.
+- [x] Author project-owned exact-base patch carrier.
+- [x] Implement fail-closed standard/custom output classification and unambiguous call pairing in the patch.
+- [x] Protect failed/unknown-success outputs, `apply_patch`, unknown/new classes, structured/media output, `ToolSearchOutput`, ambiguous pairing and non-allowlisted tools.
+- [x] Implement two-user-boundary recency floor, whole-output newest protection budget and replacement-aware minimum net benefit.
+- [x] Integrate the unconditional transform inside each `run_sampling_request` loop attempt before executed-tool metadata attachment / `build_prompt`.
+- [x] Author semantic unit tests covering the required static matrix.
+- [x] Perform adversarial static implementation review and repair findings in the patch series.
+- [x] Record explicitly that no compile/test/runtime execution occurred in ChatGPT.
+- [ ] Downstream Codex: critically inspect patch against execution-time source and adapt drift/API mismatches.
+- [ ] Downstream Codex: format/compile/run focused and integration tests; persist exact commands/results.
+- [ ] Downstream Codex: inspect current ChatGPT Community Edition update/build/install mechanism and preserve rollback.
+- [ ] Downstream Codex: update CE and integrate/install patched Codex runtime if validation remains coherent.
+- [ ] Downstream Codex: perform basic smoke and record exact runtime/package/source provenance.
+- [ ] Fresh independent final acceptance after downstream build/test/install/smoke evidence; do not declare runtime milestone GREEN before then.
+
+Patch-series pointer: `implementation/patches/TP_M02_SERIES.md`.
+Static review: `implementation/evidence/TP_M02_STATIC_REVIEW.md`.
+Prepared tests: `implementation/evidence/TP_M02_PREPARED_TESTS.md`.
+Execution handoff: `project-handoffs/TP_M02_CODEX_EXECUTION_HANDOFF.md`.
